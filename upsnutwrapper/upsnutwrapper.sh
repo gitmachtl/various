@@ -30,8 +30,10 @@
 #
 #	2.) Copy this script into /usr/local/bin/ and make it executable. You can simply run these commands to copy
 # 		the script to the right location:
-#		wget https://machtl.com/linux/nutwrapper/upsnutwrapper.sh -O /usr/local/bin/upsnutwrapper.sh
+#
+#		wget https://github.com/gitmachtl/various/raw/main/upsnutwrapper/upsnutwrapper.sh -O /usr/local/bin/upsnutwrapper.sh
 #		chmod +x /usr/local/bin/nutwrapper.sh"
+#
 #
 #	3.) Install the ucspi-tcp package via "apt-get install ucspi-tcp"
 #
