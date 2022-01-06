@@ -3,13 +3,14 @@
 # Script: 	upsnutwrapper.sh
 # Author:	Martin (Machtl) Lang
 # E-Mail:	martin@martinlang.at
-# Version:	1.2 (15.02.2019)
+# Version:	1.3 (06.01.2022)
 #
 # History:
 #
 #			1.0:	First working version "yeah"
 #			1.1:	Changed the "apcaccess" call and added the option "-u"
-#			1.2:	Added many parameters
+#			1.2:	Added many parameters, First "release" version (15.02.2019)
+#			1.3:	Pushed onto the github repo, little typo corrections (06.01.2022)
 #
 # Description:
 #
