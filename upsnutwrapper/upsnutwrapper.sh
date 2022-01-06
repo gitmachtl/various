@@ -56,7 +56,7 @@ APCUPSDSERVER="localhost"		#apcupsd is running on the same machine
 #
 #
 
-#Standardwerte definieren
+#define default values
 setdefaultvalues() {
 UPS_MFR="UPS NUT Apcupsd Wrapper"
 UPS_UPSNAME="NO NAME"
@@ -92,26 +92,26 @@ UPS_LASTXFER=""
 
 getfulldata() {
 
-setdefaultvalues									#load default values
+setdefaultvalues				#load default values
 
-APCACCESS="$(apcaccess -h $APCUPSDSERVER -u)"		#get data from acpaccess
+APCACCESS="$(apcaccess -h $APCUPSDSERVER -u)"	#get data from acpaccess
 
-IFS_BAK=$IFS										# change delimiter (IFS) to new line.
+IFS_BAK=$IFS					# change delimiter (IFS) to new line.
 IFS=$'\n'
 
 for LINE in $APCACCESS; do
 
- PARAM=${LINE:0:9}	#first 9 chars as parameter
- PARAM="$(echo -e "${PARAM}" | sed -e 's/[[:space:]]*$//')"  #delete trailing spaces
+ PARAM=${LINE:0:9}						#first 9 chars as parameter
+ PARAM="$(echo -e "${PARAM}" | sed -e 's/[[:space:]]*$//')"  	#delete trailing spaces
 
- VALUE=${LINE:11}   #chars starting at 11 as value
- VALUE="$(echo -e "${VALUE}" | sed -e 's/[[:space:]]*$//')" #delete trailing spaces
+ VALUE=${LINE:11}   						#chars starting at 11 as value
+ VALUE="$(echo -e "${VALUE}" | sed -e 's/[[:space:]]*$//')" 	#delete trailing spaces
 
  case "$PARAM" in
 
 	STATUS)			if [[ $VALUE == *"ONLINE"* ]]; then
-								UPS_STATUS="OL $UPS_STATUS";
-								if [ $BATTNOTFULL = 1 ]; then UPS_STATUS="CHRG $UPS_STATUS"; fi	#if battery is not at 100%, add charging flag
+					UPS_STATUS="OL $UPS_STATUS";
+					if [ $BATTNOTFULL = 1 ]; then UPS_STATUS="CHRG $UPS_STATUS"; fi	#if battery is not at 100%, add charging flag
 			        fi
 				if [[ $VALUE == *"ONBATT"* ]]; then UPS_STATUS="OB DISCHRG $UPS_STATUS"; fi #onbattery with discharge flag
 				if [[ $VALUE == *"LOWBATT"* ]]; then UPS_STATUS="LB $UPS_STATUS"; fi
@@ -151,23 +151,23 @@ for LINE in $APCACCESS; do
 	MANDATE)	UPS_MANDATE=$VALUE;;			#mfr date
 	FIRMWARE)	UPS_FIRMWARE=$VALUE;;			#firmwareversion
 	LOADPCT)	UPS_LOADPCT=$VALUE;;			#current load [%]
-	LINEV)		UPS_LINEV=$VALUE;;				#input voltage [V]
-	NOMINV)		UPS_NOMINV=$VALUE;;				#input voltage nominal [V]
+	LINEV)		UPS_LINEV=$VALUE;;			#input voltage [V]
+	NOMINV)		UPS_NOMINV=$VALUE;;			#input voltage nominal [V]
 	OUTPUTV)	UPS_OUTPUTV=$VALUE;;			#output voltage [V]
 	NOMOUTV)	UPS_NOMOUTV=$VALUE;;			#output voltage nominal [V]
 	MBATTCHG)	UPS_MBATTCHG=$VALUE;;			#minimum battery charge [%]
-	SENSE)		UPS_SENSE=$VALUE;;				#input sensitivity
+	SENSE)		UPS_SENSE=$VALUE;;			#input sensitivity
 	DLOWBATT)	let UPS_DLOWBATT="$(echo -e "${VALUE}" | cut -d'.' -f1)"*60;;	#low battery runtime [min] * 60 for seconds
-	APC)		UPS_APC=$VALUE;;				#internal apc id
+	APC)		UPS_APC=$VALUE;;			#internal apc id
 	VERSION)	UPS_VERSION=$VALUE;;			#driver version
-	DRIVER)		UPS_DRIVER=$VALUE;;				#driver name
-	ITEMP)		UPS_ITEMP=$VALUE;;				#internal temperature [°C]
+	DRIVER)		UPS_DRIVER=$VALUE;;			#driver name
+	ITEMP)		UPS_ITEMP=$VALUE;;			#internal temperature [°C]
 	HITRANS)	UPS_HITRANS=$VALUE;;			#input high-voltage transition to battery [V]
 	LOTRANS)	UPS_LOTRANS=$VALUE;;			#input low-voltage transition to battery [V]
 	LINEFREQ)	UPS_LINEFREQ=$VALUE;;			#input line frequency
 	NOMPOWER)	UPS_NOMPOWER=$VALUE;;			#output power nominal [W]
-	DSHUTD)		UPS_DSHUTD=$VALUE;;				#delay ups shutdown time [s]
-	LASTXFER)	UPS_LASTXFER=$VALUR;;			#reason for the last battery transfer
+	DSHUTD)		UPS_DSHUTD=$VALUE;;			#delay ups shutdown time [s]
+	LASTXFER)	UPS_LASTXFER=$VALUE;;			#reason for the last battery transfer
 
  esac
 
@@ -189,9 +189,10 @@ VALUE="${APCACCESS%%[[:cntrl:]]}"
 UPS_STATUS=""
 
 				if [[ $VALUE == *"ONLINE"* ]]; then 
-												UPS_STATUS="OL $UPS_STATUS";
-												if [ $BATTNOTFULL = 1 ]; then UPS_STATUS="CHRG $UPS_STATUS"; fi
-											   fi
+					UPS_STATUS="OL $UPS_STATUS";
+					if [ $BATTNOTFULL = 1 ]; then UPS_STATUS="CHRG $UPS_STATUS"; fi
+				fi
+				
 				if [[ $VALUE == *"ONBATT"* ]]; then UPS_STATUS="OB DISCHRG $UPS_STATUS"; fi
 				if [[ $VALUE == *"LOWBATT"* ]]; then UPS_STATUS="LB $UPS_STATUS"; fi
 				if [[ $VALUE == *"CAL"* ]]; then UPS_STATUS="CAL $UPS_STATUS"; fi
@@ -202,7 +203,6 @@ UPS_STATUS=""
 				if [[ $VALUE == *"SHUTTING DOWN"* ]]; then UPS_STATUS="SD $UPS_STATUS"; fi
 				if [[ $VALUE == *"COMMLOST"* ]]; then UPS_STATUS="OFF $UPS_STATUS"; fi
 				UPS_STATUS="$(echo -e "${UPS_STATUS}" | sed -e 's/[[:space:]]*$//')"
-
 }
 
 
@@ -222,9 +222,9 @@ read -sr INSTRING
 
 COMMAND="${INSTRING%%[[:cntrl:]]}"
 
-if [ "${COMMAND:0:5}" = "LOGIN" ]; then echo "OK"
+if [ "${COMMAND:0:5}" = "LOGIN" ]; then echo "OK"		#login start
 
-elif [ "$COMMAND" = "LOGOUT" ]; then break;
+elif [ "$COMMAND" = "LOGOUT" ]; then break;			#logout -> exit the while and exit the script
 
 elif [ "$COMMAND" = "STARTTLS" ]; then echo "ERR FEATURE-NOT-CONFIGURED"
 
@@ -234,14 +234,13 @@ elif [ "${COMMAND:0:8}" = "PASSWORD" ]; then echo "OK" 		#accepting all password
 
 elif [ "$COMMAND" = "LIST UPS" ]; then echo -en "BEGIN LIST UPS\nUPS ups \"$UPS_MFR\"\nEND LIST UPS\n"
 
-
-elif [ "${COMMAND:0:12}" = "GET VAR ups " ]; then
+elif [ "${COMMAND:0:12}" = "GET VAR ups " ]; then		#requesting a specific value
 		if [ "${COMMAND:12}" = "ups.status" ]; then
 			getstatusdata #just get only the status parameter from the ups
 			echo -en "VAR ups ${COMMAND:12} \"$UPS_STATUS\"\n"
 		fi
 
-elif [ "$COMMAND" = "LIST VAR ups" ]; then
+elif [ "$COMMAND" = "LIST VAR ups" ]; then			#requesting all values
 		getfulldata #get all values from apcaccess
 		echo -en "BEGIN LIST VAR ups\n"
 
