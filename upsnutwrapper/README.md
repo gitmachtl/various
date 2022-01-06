@@ -1,5 +1,9 @@
 ## Apcupsd NUT Wrapper Script (Apcupsd and NUT on the same machine)
 
+&nbsp;<p>
+
+### Why this little script?
+
 Hi,
 
 i had a problem. I have a Debian based Linux machine (works for Ubuntu or a Raspberry too) with an APC ups connected via USB cable (works also via ethernet client) running the lovely,
@@ -74,11 +78,23 @@ Please feel free to make this script better, but send me a copy (email above) if
 
 &nbsp;<br>
 
-❤️ **Enjoy your apcupsd and "Nut Server" side by side on the same machine 😄**
+### Config
+
+There is not much configuration needed, it is working out of the box if `apcupsd/apcaccess` is running on the **localhost**.
+However there are three lines in the script below the intro section where you can simply specify where `apcaccess` should get 
+the information from the ups:
+``` bash
+APCUPSDSERVER="localhost"		#apcupsd is running on the same machine
+#APCUPSDSERVER="127.0.0.1"		#apcupsd is running on the same machine
+#APCUPSDSERVER="remoteip:3551"		#apcupsd is running on a remote machine with ip "remoteip" on the port "3551"
+```
+Simply comment/uncomment what fits your installation. 
 
 &nbsp;<br>
 
-_________________
+## ❤️ **Enjoy your apcupsd and "Nut Server" side by side on the same machine 😄**
+
+&nbsp;<br>
 
 ### Details:
 ```
