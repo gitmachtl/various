@@ -70,7 +70,7 @@ Please feel free to make this script better, but send me a copy (email above) if
 
      This starts a listening tcp server on port 3493(nut) with no binding (0.0.0.0), max. 10 simultanious connections.
      
-     Another method is to simply put it into the crontab file so it starts with the system, just add an entry like:
+     Another method is to simply put it into the `/etc/crontab` file so it starts with the system, just add an entry like:
      ```
      @reboot  <user>  tcpserver -q -c 10 -HR 0.0.0.0 3493 /usr/local/bin/upsnutwrapper.sh &
      ```
