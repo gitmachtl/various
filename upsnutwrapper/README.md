@@ -6,12 +6,12 @@
 
 Hi,
 
-i had a problem. I have a Debian based Linux machine (works for Ubuntu or a Raspberry too) with an APC ups connected via USB cable (works also via ethernet client) running the lovely,
-small and simple **apcupsd**. Also another PCs (running Windows) are connected to the same ups, so i installed **apcupsd** on Windows too and connected
-it to the apcupsd on the Linux machine, fine. Then i needed an additional **NUT server** so i can hook up my **Synology NAS** also to the same ups.
+I had a problem. I have a Debian based Linux machine (works for Ubuntu or a Raspberry too) with an APC ups connected via USB cable (works also via ethernet client) running the lovely,
+small and simple **apcupsd**. Also other PCs (running Windows) are connected to the same ups, so I installed **apcupsd** on Windows too and connected
+it to the apcupsd on the Linux machine, fine. Then I needed an additional **NUT server** so I can hook up my **Synology NAS** also to the same ups.
 But, trying to install the complicated NUT-Server alongside **apcupsd** on the same linux machine was a pain. 
 
-So, i wrote this little script that emulates a **NUT Server** and gets the values from `apcupsd/apcaccess`.
+So, I wrote this little script that emulates a **NUT Server** and gets the values from `apcupsd/apcaccess`.
 
 It is working great for me here and also in my company and for my friends, should work with other NUT Clients too not only Synology. Maybe someone finds it useful... 😄
 
@@ -27,7 +27,7 @@ or on a remote machine. It is working fine with Synology NAS for example (my use
 
 The script is simple and small and solves some problems having **apcupsd and a NUT-Server** on the
 same machine. Use it if you like, but don't scream at me if it's doing something wrong.
-Please feel free to make this script better, but send me a copy (email above) if you're done. :-)
+Please feel free to make this script better, patches/pull requests are welcome if you're done. :-)
 
 &nbsp;<br>
 
@@ -54,7 +54,7 @@ Please feel free to make this script better, but send me a copy (email above) if
      You can simply run these commands to copy the script to the right location:
      ``` console
      wget https://github.com/gitmachtl/various/raw/main/upsnutwrapper/upsnutwrapper.sh -O /usr/local/bin/upsnutwrapper.sh
-     chmod +x /usr/local/bin/nutwrapper.sh
+     chmod +x /usr/local/bin/upsnutwrapper.sh
      ```
      &nbsp;<br>
   
@@ -68,7 +68,7 @@ Please feel free to make this script better, but send me a copy (email above) if
      tcpserver -q -c 10 -HR 0.0.0.0 3493 /usr/local/bin/upsnutwrapper.sh &
      ```
 
-     This starts a listening tcp server on port 3493(nut) with no binding (0.0.0.0), max. 10 simultanious connections.
+     This starts a listening tcp server on port 3493 (nut) with no binding (0.0.0.0), max. 10 simultanious connections.
      
      Another method is to simply put it into the `/etc/crontab` file so it starts with the system, just add an entry like:
      ```
