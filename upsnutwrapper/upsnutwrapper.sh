@@ -265,6 +265,8 @@ elif [ "${COMMAND:0:$VAR_NAME_INDEX}" = "GET VAR $UPSNAME " ]; then	  #requestin
 		elif [ "${COMMAND:$VAR_NAME_INDEX}" = "ups.test.result" ]; then
 			gettestresult #get only test result data
 			echo -en "VAR $UPSNAME ups.test.result \"$UPS_SELFTEST\"\n"
+		else
+			log "failed to process variable"
 		fi
 
 elif [ "$COMMAND" = "LIST VAR $UPSNAME" ]; then			#requesting all values
