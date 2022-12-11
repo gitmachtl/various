@@ -3,7 +3,7 @@
 # Script: 	upsnutwrapper.sh
 # Author:	Martin (Machtl) Lang
 # E-Mail:	martin@martinlang.at
-# Version:	1.3 (06.01.2022)
+# Version:	1.5 (11.12.2022)
 #
 # History:
 #
@@ -11,10 +11,12 @@
 #			1.1:	Changed the "apcaccess" call and added the option "-u"
 #			1.2:	Added many parameters, First "release" version (15.02.2019)
 #			1.3:	Pushed onto the github repo, little typo corrections (06.01.2022)
+#			1.4:	Added logging and QNAP support, cleaned up code
+#			1.5:	Better connection error handling, added some parameters
 #
 # Description:
 #
-#	This little quiet non-optimized script emulates a NUT-Server together with "tcpserver"
+#	This little non-optimized script emulates a NUT-Server together with the tinytool "tcpserver"
 #	from the ucspi-tcp package. It needs an installed and working apcupsd running on the machine
 #	or on a remote machine. It is working fine with Synology NAS for example (my usecase).
 #	The script is simple and small and solves some problems having apcupsd and a NUT-Server on the
@@ -33,8 +35,7 @@
 # 		the script to the right location:
 #
 #		wget https://github.com/gitmachtl/various/raw/main/upsnutwrapper/upsnutwrapper.sh -O /usr/local/bin/upsnutwrapper.sh
-#		chmod +x /usr/local/bin/nutwrapper.sh"
-#
+#		chmod +x /usr/local/bin/upsnutwrapper.sh
 #
 #	3.) Install the ucspi-tcp package via "apt-get install ucspi-tcp"
 #
@@ -52,6 +53,10 @@ APCUPSDSERVER="localhost"		#apcupsd is running on the same machine
 #APCUPSDSERVER="127.0.0.1"		#apcupsd is running on the same machine
 #APCUPSDSERVER="remoteip:3551"		#apcupsd is running on a remote machine with ip "remoteip" on the port "3551"
 
+LOGGING=false				#set to 'true' to see incoming commands
+LOG_FILE=/tmp/upsnutwrapper.log		#the location where logs are written to
+
+
 #
 # ------------------------------------------------------------------------------------------------------------------------
 #
@@ -59,43 +64,64 @@ APCUPSDSERVER="localhost"		#apcupsd is running on the same machine
 
 #define default values
 setdefaultvalues() {
-UPS_MFR="UPS NUT Apcupsd Wrapper"
-UPS_UPSNAME="NO NAME"
-UPS_MODEL="NO MODEL"
-UPS_BCHARGE="0"
-UPS_TIMELEFT="0"
-UPS_BATTV="0"
-UPS_NOMBATTV="0"
-UPS_SERIALNO=""
-UPS_BATTDATE=""
-UPS_MANDATE=""
-UPS_FIRMWARE=""
-UPS_LOADPCT="0"
-UPS_LINEV="0"
-UPS_OUTPUTV="0"
-UPS_NOMOUTV="0"
-UPS_MBATTCHG="10"
-UPS_DLOWBATT="10"
-UPS_SENSE=""
-UPS_APC=""
-UPS_VERSION=""
-UPS_DRIVER=""
-UPS_ITEMP=""
-UPS_HITRANS=""
-UPS_LOTRANS=""
-UPS_LINEFREQ=""
-UPS_NOMINV="230"
-UPS_SELFTEST=""
-UPS_DSHUTD="0"
-UPS_NOMPOWER=$NOMPOWER
-UPS_LASTXFER=""
+
+UPS_battery_charge="0"
+UPS_battery_charge_low="10"
+UPS_battery_charge_warning="50"
+UPS_battery_date=""
+UPS_battery_mfr_date=""
+UPS_battery_runtime="0"
+UPS_battery_runtime_low="10"
+UPS_battery_temperature=""
+UPS_battery_type="PbAc"
+UPS_battery_voltage="0"
+UPS_battery_voltage_nominal="0"
+UPS_device_mfr="UPS NUT Apcupsd Wrapper"
+UPS_device_model="NO MODEL"
+UPS_device_serial=""
+UPS_device_type="ups"
+UPS_driver_name="usbhid-ups"
+UPS_driver_parameter_pollfreq="60"
+UPS_driver_parameter_pollinterval="10"
+UPS_driver_version_data=""
+UPS_driver_version_internal="apcupsd"
+UPS_input_frequency=""
+UPS_input_frequency_nominal="50"
+UPS_input_sensitivity=""
+UPS_input_transfer_high=""
+UPS_input_transfer_low=""
+UPS_input_transfer_reason=""
+UPS_input_voltage="0"
+UPS_input_voltage_nominal="230"
+UPS_input_voltage_minimum="0"
+UPS_input_voltage_maximum="0"
+UPS_mfr_date=""
+UPS_output_current="0"
+UPS_output_voltage="0"
+UPS_output_voltage_nominal="0"
+UPS_server_info=$HOSTNAME
+UPS_ups_delay_shutdown="0"
+UPS_ups_firmware=""
+UPS_ups_firmware_aux=""
+UPS_ups_id="NO NAME"
+UPS_ups_load="0"
+UPS_ups_model="NO MODEL"
+UPS_ups_productid=""
+UPS_ups_realpower_nominal=$NOMPOWER
+UPS_ups_power_nominal=""
+UPS_ups_serial=""
+UPS_ups_temperature=""
+UPS_ups_test_date=""
+UPS_ups_test_result=""
 }
 
 getfulldata() {
 
 setdefaultvalues				#load default values
 
-APCACCESS="$(apcaccess -h $APCUPSDSERVER -u)"	#get data from acpaccess
+APCACCESS="$(apcaccess -h $APCUPSDSERVER -u 2> /dev/null)"	#get data from acpaccess
+if [ $? -ne 0 ]; then return 1; fi #exit with errorcode 1 if something with the connection is wrong
+APCACCESS=$(sort <<< "${APCACCESS}") #sort it so for example BCHARGE will be processed before STATUS
 
 IFS_BAK=$IFS					# change delimiter (IFS) to new line.
 IFS=$'\n'
@@ -110,102 +136,136 @@ for LINE in $APCACCESS; do
 
  case "$PARAM" in
 
-	STATUS)			if [[ $VALUE == *"ONLINE"* ]]; then
-					UPS_STATUS="OL $UPS_STATUS";
-					if [ $BATTNOTFULL = 1 ]; then UPS_STATUS="CHRG $UPS_STATUS"; fi	#if battery is not at 100%, add charging flag
-			        fi
-				if [[ $VALUE == *"ONBATT"* ]]; then UPS_STATUS="OB DISCHRG $UPS_STATUS"; fi #onbattery with discharge flag
-				if [[ $VALUE == *"LOWBATT"* ]]; then UPS_STATUS="LB $UPS_STATUS"; fi
-				if [[ $VALUE == *"CAL"* ]]; then UPS_STATUS="CAL $UPS_STATUS"; fi
-				if [[ $VALUE == *"OVERLOAD"* ]]; then UPS_STATUS="OVER $UPS_STATUS"; fi
-				if [[ $VALUE == *"TRIM"* ]]; then UPS_STATUS="TRIM $UPS_STATUS"; fi
-				if [[ $VALUE == *"BOOST"* ]]; then UPS_STATUS="BOOST $UPS_STATUS"; fi
-				if [[ $VALUE == *"REPLACEBATT"* ]]; then UPS_STATUS="RB $UPS_STATUS"; fi
-				if [[ $VALUE == *"SHUTTING DOWN"* ]]; then UPS_STATUS="SD $UPS_STATUS"; fi
-				if [[ $VALUE == *"COMMLOST"* ]]; then UPS_STATUS="OFF $UPS_STATUS"; fi
-				UPS_STATUS="$(echo -e "${UPS_STATUS}" | sed -e 's/[[:space:]]*$//')"
-				;;
+	BCHARGE) 	UPS_battery_charge=$VALUE; #battery charge in [%]
+			if [[ "${VALUE%%.*}" == "100" ]]; then BATTNOTFULL=0; else BATTNOTFULL=1; fi
+			;;
 
-	UPSNAME) 	UPS_UPSNAME=$VALUE;;
-	MODEL) 		UPS_MODEL=$VALUE
-				if [[ $VALUE == *"Back-UPS XS 700U"* ]]; then NOMPOWER="390";
-				elif [[ $VALUE == *"SMART-UPS 700"* ]]; then NOMPOWER="450";
-				elif [[ $VALUE == *"Smart-UPS C 1500"* ]]; then NOMPOWER="900";
-				fi
-				UPS_NOMPOWER=$NOMPOWER;
-				;;
-	BCHARGE) 	UPS_BCHARGE=$VALUE;				#battery charge in [%]
-				if [ "$(echo -e "${VALUE}" | cut -d'.' -f1)" = "100" ]; then BATTNOTFULL=0; else BATTNOTFULL=1; fi
-				;;
+	STATUS)
+			UPS_ups_status=""
+			case "${VALUE}" in
+				*"ONLINE"*) 		UPS_ups_status+="OL "
+							if [ $BATTNOTFULL = 1 ]; then UPS_ups_status+="CHRG "; fi #if battery is not at 100%, add charging flag
+							;;&
+				*"ONBATT"*)		UPS_ups_status+="OB DISCHRG " ;;& #onbattery with discharge flag
+				*"LOWBATT"*)		UPS_ups_status+="LB " ;;&
+				*"CAL"*)		UPS_ups_status+="CAL " ;;&
+				*"OVERLOAD"*)		UPS_ups_status+="OVER " ;;&
+				*"TRIM"*)		UPS_ups_status+="TRIM " ;;&
+				*"BOOST"*)		UPS_ups_status+="BOOST " ;;&
+				*"REPLACEBATT"*)	UPS_ups_status+="RB " ;;&
+				*"SHUTTING DOWN"*)	UPS_ups_status+="SD " ;;&
+				*"COMMLOST"*)		UPS_ups_status+="OFF " ;;
+			esac
+			UPS_ups_status="$(echo -e "${UPS_ups_status}" | sed -e 's/[[:space:]]*$//')"
+			;;
 
-	SELFTEST)	if [[ $VALUE == *"OK"* ]]; then UPS_SELFTEST="OK - Battery GOOD";
-				elif [[ $VALUE == *"BT"* ]]; then UPS_SELFTEST="FAILED - Battery Capacity LOW";
-				elif [[ $VALUE == *"NG"* ]]; then UPS_SELFTEST="FAILED - Overload";
-				elif [[ $VALUE == *"NO"* ]]; then UPS_SELFTEST="No Test in the last 5mins";
-				fi;;
+	UPSNAME) 	UPS_ups_id=$VALUE;;
 
-	TIMELEFT)	let UPS_TIMELEFT="$(echo -e "${VALUE}" | cut -d'.' -f1)"*60;;	#only use string before ".", multiply with 60 for value in seconds
-	BATTV) 		UPS_BATTV=$VALUE;;  			#battery voltage [V]
-	NOMBATTV) 	UPS_NOMBATTV=$VALUE;;  			#battery voltage nominal [V]
-	SERIALNO)	UPS_SERIALNO=$VALUE;;			#serialnumber of the ups
-	BATTDATE)	UPS_BATTDATE=$VALUE;;			#battery date
-	MANDATE)	UPS_MANDATE=$VALUE;;			#mfr date
-	FIRMWARE)	UPS_FIRMWARE=$VALUE;;			#firmwareversion
-	LOADPCT)	UPS_LOADPCT=$VALUE;;			#current load [%]
-	LINEV)		UPS_LINEV=$VALUE;;			#input voltage [V]
-	NOMINV)		UPS_NOMINV=$VALUE;;			#input voltage nominal [V]
-	OUTPUTV)	UPS_OUTPUTV=$VALUE;;			#output voltage [V]
-	NOMOUTV)	UPS_NOMOUTV=$VALUE;;			#output voltage nominal [V]
-	MBATTCHG)	UPS_MBATTCHG=$VALUE;;			#minimum battery charge [%]
-	SENSE)		UPS_SENSE=$VALUE;;			#input sensitivity
-	DLOWBATT)	let UPS_DLOWBATT="$(echo -e "${VALUE}" | cut -d'.' -f1)"*60;;	#low battery runtime [min] * 60 for seconds
-	APC)		UPS_APC=$VALUE;;			#internal apc id
-	VERSION)	UPS_VERSION=$VALUE;;			#driver version
-	DRIVER)		UPS_DRIVER=$VALUE;;			#driver name
-	ITEMP)		UPS_ITEMP=$VALUE;;			#internal temperature [°C]
-	HITRANS)	UPS_HITRANS=$VALUE;;			#input high-voltage transition to battery [V]
-	LOTRANS)	UPS_LOTRANS=$VALUE;;			#input low-voltage transition to battery [V]
-	LINEFREQ)	UPS_LINEFREQ=$VALUE;;			#input line frequency
-	NOMPOWER)	UPS_NOMPOWER=$VALUE;;			#output power nominal [W]
-	DSHUTD)		UPS_DSHUTD=$VALUE;;			#delay ups shutdown time [s]
-	LASTXFER)	UPS_LASTXFER=$VALUE;;			#reason for the last battery transfer
+	MODEL) 		UPS_device_model=$VALUE
+			UPS_ups_model=$VALUE
+			case "${VALUE}" in
+				*"Back-UPS XS 700U"*)	NOMPOWER="390";;
+				*"SMART-UPS 700"*)	NOMPOWER="450";;
+				*"Smart-UPS C 1500"*)	NOMPOWER="900";;
+			esac
+			UPS_ups_realpower_nominal=$NOMPOWER;
+			;;
+
+	SELFTEST)
+			case "${VALUE}" in
+				*"OK"*) UPS_ups_test_result="OK - Battery GOOD";;
+				*"BT"*) UPS_ups_test_result="FAILED - Battery Capacity LOW";;
+				*"NG"*) UPS_ups_test_result="FAILED - Overload";;
+				*"NO"*) UPS_ups_test_result="No Test in the last 5mins";;
+			esac
+			;;
+
+	LASTSTEST)	UPS_ups_test_date=$(date --date="$VALUE" --iso-8601=minutes);; #set last testdate in iso8601 format (YYYY-MM-DDThh:mm+00:00)
+	TIMELEFT)	let UPS_battery_runtime=${VALUE%%.*}*60;;	#only use string before ".", multiply with 60 for value in seconds
+	BATTV) 		UPS_battery_voltage=$VALUE;;  			#battery voltage [V]
+	NOMBATTV) 	UPS_battery_voltage_nominal=$VALUE;;  			#battery voltage nominal [V]
+	SERIALNO)	UPS_device_serial=$VALUE; UPS_ups_serial=$VALUE;; #serialnumber of the ups
+	BATTDATE)	UPS_battery_date=$VALUE; UPS_battery_mfr_date=$VALUE;; #battery date
+	MANDATE)	UPS_mfr_date=$VALUE;;			#mfr date
+	FIRMWARE)	UPS_ups_firmware=$VALUE; UPS_ups_firmware_aux=$VALUE;; #firmwareversion
+	LOADPCT)	UPS_ups_load=$VALUE;;			#current load [%]
+	LINEV)		UPS_input_voltage=$VALUE; UPS_input_voltage_minimum=$VALUE; UPS_input_voltage_maximum=$VALUE;;	#input voltage [V], also set min/max voltage in case there is no separate data for that
+	MINLINEV)	UPS_input_voltage_minimum=$VALUE;;		#input voltage [V]
+	MAXLINEV)	UPS_input_voltage_maximum=$VALUE;;		#input voltage [V]
+	NOMINV)		UPS_input_voltage_nominal=$VALUE;;		#input voltage nominal [V]
+	OUTPUTV)	UPS_output_voltage=$VALUE;;			#output voltage [V]
+	OUTCURNT)	UPS_output_current=${VALUE%%\ *};;		#output current [A]
+	NOMOUTV)	UPS_output_voltage_nominal=$VALUE;;		#output voltage nominal [V]
+	NOMAPNT) 	UPS_ups_power_nominal=${VALUE%%\ *};;  		#nominal apparent power [VA]
+	MBATTCHG)	UPS_battery_charge_low=$VALUE;;			#minimum battery charge [%]
+	SENSE)		UPS_input_sensitivity=$VALUE;;			#input sensitivity
+	DLOWBATT)	let UPS_battery_runtime_low=${VALUE%%.*}*60;;	#low battery runtime [min] * 60 for seconds
+	APC)		UPS_ups_productid=$VALUE;;			#internal apc id
+	VERSION)	UPS_driver_version_internal="apcupsd $VALUE";; #driver version
+	DRIVER)		UPS_driver_version_data=$VALUE;;			#driver name
+	ITEMP)		UPS_ups_temperature=$VALUE; UPS_battery_temperature=$VALUE;; #internal temperature [°C]
+	HITRANS)	UPS_input_transfer_high=$VALUE;;			#input high-voltage transition to battery [V]
+	LOTRANS)	UPS_input_transfer_low=$VALUE;;			#input low-voltage transition to battery [V]
+	LINEFREQ)	UPS_input_frequency=$VALUE;;			#input line frequency
+	NOMPOWER)	UPS_ups_realpower_nominal=$VALUE;;			#output power nominal [W]
+	DSHUTD)		UPS_ups_delay_shutdown=$VALUE;;			#delay ups shutdown time [s]
+	LASTXFER)	UPS_input_transfer_reason=$VALUE;;			#reason for the last battery transfer
 
  esac
 
 done  #for
 
 #substitute battery date and ups mfr date with each other if the other does not exist
-if [ "$UPS_BATTDATE" = "" ]; then UPS_BATTDATE=$UPS_MANDATE; fi
-if [ "$UPS_MANDATE" = "" ]; then UPS_MANDATE=$UPS_BATTDATE; fi
+if [ "$UPS_battery_date" = "" ]; then UPS_battery_date=$UPS_mfr_date; UPS_battery_mfr_date=$UPS_mfr_date; fi
+if [ "$UPS_mfr_date" = "" ]; then UPS_mfr_date=$UPS_battery_date; fi
 
 #if there is a value for the nominal output power, include it into the ups model name
-if ! [ "$UPS_NOMPOWER" = "-1" ]; then UPS_MODEL="$UPS_MODEL ($UPS_NOMPOWER W)"; fi
+if ! [ "$UPS_ups_realpower_nominal" = "-1" ]; then UPS_device_model="$UPS_device_model ($UPS_ups_realpower_nominal W)"; UPS_ups_model=${UPS_device_model}; fi
 
 IFS=$IFS_BAK
 }
 
 getstatusdata() {
-APCACCESS="$(apcaccess -h $APCUPSDSERVER -p STATUS)"
-VALUE="${APCACCESS%%[[:cntrl:]]}"
-UPS_STATUS=""
+APCACCESS="$(apcaccess -h $APCUPSDSERVER -p STATUS 2> /dev/null)"
+if [ $? -eq 1 ]; then return 1; fi #exit with errorcode 1 if something with the connection is wrong
 
-				if [[ $VALUE == *"ONLINE"* ]]; then 
-					UPS_STATUS="OL $UPS_STATUS";
-					if [ $BATTNOTFULL = 1 ]; then UPS_STATUS="CHRG $UPS_STATUS"; fi
-				fi
-				
-				if [[ $VALUE == *"ONBATT"* ]]; then UPS_STATUS="OB DISCHRG $UPS_STATUS"; fi
-				if [[ $VALUE == *"LOWBATT"* ]]; then UPS_STATUS="LB $UPS_STATUS"; fi
-				if [[ $VALUE == *"CAL"* ]]; then UPS_STATUS="CAL $UPS_STATUS"; fi
-				if [[ $VALUE == *"OVERLOAD"* ]]; then UPS_STATUS="OVER $UPS_STATUS"; fi
-				if [[ $VALUE == *"TRIM"* ]]; then UPS_STATUS="TRIM $UPS_STATUS"; fi
-				if [[ $VALUE == *"BOOST"* ]]; then UPS_STATUS="BOOST $UPS_STATUS"; fi
-				if [[ $VALUE == *"REPLACEBATT"* ]]; then UPS_STATUS="RB $UPS_STATUS"; fi
-				if [[ $VALUE == *"SHUTTING DOWN"* ]]; then UPS_STATUS="SD $UPS_STATUS"; fi
-				if [[ $VALUE == *"COMMLOST"* ]]; then UPS_STATUS="OFF $UPS_STATUS"; fi
-				UPS_STATUS="$(echo -e "${UPS_STATUS}" | sed -e 's/[[:space:]]*$//')"
+VALUE="${APCACCESS%%[[:cntrl:]]}"
+UPS_ups_status=""
+case "${VALUE}" in
+	*"ONLINE"*) 		UPS_ups_status+="OL "
+				if [ $BATTNOTFULL = 1 ]; then UPS_ups_status+="CHRG "; fi
+				;;&
+	*"ONBATT"*)		UPS_ups_status+="OB DISCHRG " ;;&
+	*"LOWBATT"*)		UPS_ups_status+="LB " ;;&
+	*"CAL"*)		UPS_ups_status+="CAL " ;;&
+	*"OVERLOAD"*)		UPS_ups_status+="OVER " ;;&
+	*"TRIM"*)		UPS_ups_status+="TRIM " ;;&
+	*"BOOST"*)		UPS_ups_status+="BOOST " ;;&
+	*"REPLACEBATT"*)	UPS_ups_status+="RB " ;;&
+	*"SHUTTING DOWN"*)	UPS_ups_status+="SD " ;;&
+	*"COMMLOST"*)		UPS_ups_status+="OFF " ;;
+esac
+UPS_ups_status="$(echo -e "${UPS_ups_status}" | sed -e 's/[[:space:]]*$//')"
 }
 
+gettestresult() {
+APCACCESS="$(apcaccess -h $APCUPSDSERVER -p SELFTEST 2> /dev/null)"
+if [ $? -eq 1 ]; then return 1; fi #exit with errorcode 1 if something with the connection is wrong
+
+VALUE="${APCACCESS%%[[:cntrl:]]}"
+case "${VALUE}" in
+	*"OK"*) UPS_ups_test_result="OK - Battery GOOD";;
+	*"BT"*) UPS_ups_test_result="FAILED - Battery Capacity LOW";;
+	*"NG"*) UPS_ups_test_result="FAILED - Overload";;
+	*"NO"*) UPS_ups_test_result="No Test in the last 5mins";;
+esac
+}
+
+log() {
+if [ "$LOGGING" = true ] ; then
+	echo -e "$(date)\tREM_IP=${TCPREMOTEIP} \tPID=$$ \t${1}" >> "$LOG_FILE"
+fi
+}
 
 # MAIN
 #
@@ -214,6 +274,7 @@ UPS_STATUS=""
 #some vars
 BATTNOTFULL=0	#we start the script thinking of a full battery
 NOMPOWER="-1"	#no nominal power value present
+unset x		#important for the check ${!local_var+x} later on
 
 setdefaultvalues	#load default values
 
@@ -222,92 +283,178 @@ while : ; do
 read -sr INSTRING
 
 COMMAND="${INSTRING%%[[:cntrl:]]}"
+log "$COMMAND"
 
-if [ "${COMMAND:0:5}" = "LOGIN" ]; then echo "OK"		#login start
+case "${COMMAND}" in
 
-elif [ "$COMMAND" = "LOGOUT" ]; then break;			#logout -> exit the while and exit the script
+	"LOGIN"*|"USERNAME"*|"PASSWORD"* ) # login, accepting all usernames and passwords
+			log ">>> ${COMMAND} OK"
+			echo "OK"
+			;;
 
-elif [ "$COMMAND" = "STARTTLS" ]; then echo "ERR FEATURE-NOT-CONFIGURED"
+	"LOGOUT" ) #logout -> exit the while and exit the script
+			log ">>> Logout, exiting script"
+			break
+			;;
 
-elif [ "${COMMAND:0:8}" = "USERNAME" ]; then echo "OK" 		#accepting all usernames
+	"STARTTLS" ) #this is not supported by the script, send an error so the NUT-Client requests continues without TLS
+			log ">>> TLS requested, but not supported"
+			echo "ERR FEATURE-NOT-SUPPORTED"
+			;;
 
-elif [ "${COMMAND:0:8}" = "PASSWORD" ]; then echo "OK" 		#accepting all passwords
+	"LIST UPS" ) #return a list of all UPSs to the client, in our case return the names "ups" for synology and "qnapups" for qnap
+			log ">>> Serving all the names of the UPSs"
+			echo -en "BEGIN LIST UPS\nUPS ups \"$UPS_device_mfr\"\nUPS qnapups \"$UPS_device_mfr\"\nEND LIST UPS\n"
+			;;
 
-elif [ "$COMMAND" = "LIST UPS" ]; then echo -en "BEGIN LIST UPS\nUPS ups \"$UPS_MFR\"\nEND LIST UPS\n"
+	*) #continue with specific commands
 
-elif [ "${COMMAND:0:12}" = "GET VAR ups " ]; then		#requesting a specific value
-		if [ "${COMMAND:12}" = "ups.status" ]; then
-			getstatusdata #just get only the status parameter from the ups
-			echo -en "VAR ups ${COMMAND:12} \"$UPS_STATUS\"\n"
+		if [[ "${COMMAND}" =~ "GET VAR "(.*)" "(.*)"" ]]; then #requesting a specific value
+
+			UPSNAME=${BASH_REMATCH[1]}
+			VAR=${BASH_REMATCH[2]}
+
+			log ">>> Requested VAR=${VAR} for UPSNAME=${UPSNAME}"
+
+                        case "${VAR}" in
+
+                                "ups.status")
+                                        getstatusdata #get only the status parameter from the ups
+					if [ $? -ne 0 ]; then
+						log ">>> Requesting status data via apcaccess failed!"
+						log ">>> Exiting script"
+						echo "ERR DRIVER-NOT-CONNECTED"
+						break #exiting the script
+					fi
+                                        log ">>> returned data for UPS_ups_status=${UPS_ups_status}"
+                                        echo -en "VAR $UPSNAME ${VAR} \"$UPS_ups_status\"\n"
+                                        ;;
+
+                                "ups.test.result")
+                                        gettestresult #get only test result data
+					if [ $? -ne 0 ]; then
+						log ">>> Requesting test result data via apcaccess failed!"
+						log ">>> Exiting script"
+						echo "ERR DRIVER-NOT-CONNECTED"
+						break #exiting the script
+					fi
+                                        log ">>> returned data for UPS_ups_test_result=${UPS_ups_test_result}"
+                                        echo -en "VAR $UPSNAME ${VAR} \"$UPS_ups_test_result\"\n"
+                                        ;;
+
+                                *) #return any specific requested VAR if available
+                                        local_var="UPS_${VAR//./_}"; #substitute the . with _ -> example ups.status -> local_var="UPS_ups_status"
+                                        if [ ! -z ${!local_var+x} ]; then
+                                                getfulldata #get all values from apcaccess
+						if [ $? -ne 0 ]; then
+							log ">>> Requesting data via apcaccess failed!"
+							log ">>> Exiting script"
+							echo "ERR DRIVER-NOT-CONNECTED"
+							break #exiting the script
+						fi
+                                                log ">>> returned data for ${local_var}=${!local_var}"
+                                                echo -en "VAR $UPSNAME ${VAR} \"${!local_var}\"\n"
+                                                else
+                                                log ">>> failed to process variable ${VAR} (${local_var})"
+                                                echo -en "ERR VAR-NOT-SUPPORTED\n"
+                                        fi
+                                        ;;
+
+                        esac
+
+		elif [[ "${COMMAND}" =~ "LIST VAR "(.*)"" ]]; then #requesting all values
+
+			UPSNAME=${BASH_REMATCH[1]}
+
+			log ">>> Requested all VARs for UPSNAME=${UPSNAME}"
+
+			getfulldata #get all values from apcaccess
+			if [ $? -ne 0 ]; then
+				log ">>> Requesting fulldata via apcaccess failed!"
+				log ">>> Exiting script"
+				echo "ERR DRIVER-NOT-CONNECTED"
+				break #exiting the script
+			fi
+
+			echo -en "BEGIN LIST VAR $UPSNAME\n"
+
+			echo -en "VAR $UPSNAME device.mfr \"$UPS_device_mfr\"\n"
+			echo -en "VAR $UPSNAME device.model \"$UPS_device_model\"\n"
+			echo -en "VAR $UPSNAME device.serial \"$UPS_device_serial\"\n"
+			echo -en "VAR $UPSNAME device.type \"$UPS_device_type\"\n"
+
+			echo -en "VAR $UPSNAME ups.mfr \"$UPS_device_mfr\"\n"
+			echo -en "VAR $UPSNAME ups.mfr.date \"$UPS_mfr_date\"\n"
+			echo -en "VAR $UPSNAME ups.id \"$UPS_ups_id\"\n"
+			echo -en "VAR $UPSNAME ups.vendorid \"051d\"\n"
+			echo -en "VAR $UPSNAME ups.model \"$UPS_ups_model\"\n"
+			echo -en "VAR $UPSNAME ups.status \"$UPS_ups_status\"\n"
+			echo -en "VAR $UPSNAME ups.load \"$UPS_ups_load\"\n"
+			echo -en "VAR $UPSNAME ups.serial \"$UPS_ups_serial\"\n"
+			echo -en "VAR $UPSNAME ups.firmware \"$UPS_ups_firmware\"\n"
+			echo -en "VAR $UPSNAME ups.firmware.aux \"$UPS_ups_firmware_aux\"\n"
+			echo -en "VAR $UPSNAME ups.productid \"$UPS_ups_productid\"\n"
+			echo -en "VAR $UPSNAME ups.temperature \"$UPS_ups_temperature\"\n"
+			echo -en "VAR $UPSNAME ups.power.nominal \"$UPS_ups_power_nominal\"\n"
+			echo -en "VAR $UPSNAME ups.realpower.nominal \"$UPS_ups_realpower_nominal\"\n"
+			echo -en "VAR $UPSNAME ups.test.date \"$UPS_ups_test_date\"\n"
+			echo -en "VAR $UPSNAME ups.test.result \"$UPS_ups_test_result\"\n"
+			echo -en "VAR $UPSNAME ups.delay.start \"0\"\n"
+			echo -en "VAR $UPSNAME ups.delay.shutdown \"$UPS_ups_delay_shutdown\"\n"
+			echo -en "VAR $UPSNAME ups.timer.reboot \"-1\"\n"
+			echo -en "VAR $UPSNAME ups.timer.start \"-1\"\n"
+			echo -en "VAR $UPSNAME ups.timer.shutdown \"-1\"\n"
+
+			echo -en "VAR $UPSNAME battery.runtime \"$UPS_battery_runtime\"\n"
+			echo -en "VAR $UPSNAME battery.runtime.low \"$UPS_battery_runtime_low\"\n"
+			echo -en "VAR $UPSNAME battery.charge \"$UPS_battery_charge\"\n"
+			echo -en "VAR $UPSNAME battery.charge.low \"$UPS_battery_charge_low\"\n"
+			echo -en "VAR $UPSNAME battery.charge.warning \"$UPS_battery_charge_warning\"\n"
+			echo -en "VAR $UPSNAME battery.voltage \"$UPS_battery_voltage\"\n"
+			echo -en "VAR $UPSNAME battery.voltage.nominal \"$UPS_battery_voltage_nominal\"\n"
+			echo -en "VAR $UPSNAME battery.date \"$UPS_battery_date\"\n"
+			echo -en "VAR $UPSNAME battery.mfr.date \"$UPS_battery_date\"\n"
+			echo -en "VAR $UPSNAME battery.temperature \"$UPS_battery_temperature\"\n"
+			echo -en "VAR $UPSNAME battery.type \"$UPS_battery_type\"\n"
+
+			echo -en "VAR $UPSNAME driver.name \"$UPS_driver_name\"\n"
+			echo -en "VAR $UPSNAME driver.version.internal \"$UPS_driver_version_internal\"\n"
+			echo -en "VAR $UPSNAME driver.version.data \"$UPS_driver_version_data\"\n"
+			echo -en "VAR $UPSNAME driver.parameter.pollfreq \"$UPS_driver_parameter_pollfreq\"\n"
+			echo -en "VAR $UPSNAME driver.parameter.pollinterval \"$UPS_driver_parameter_pollinterval\"\n"
+
+			echo -en "VAR $UPSNAME input.voltage \"$UPS_input_voltage\"\n"
+			echo -en "VAR $UPSNAME input.voltage.nominal \"$UPS_input_voltage_nominal\"\n"
+			echo -en "VAR $UPSNAME input.voltage.minimum \"$UPS_input_voltage_minimum\"\n"
+			echo -en "VAR $UPSNAME input.voltage.maximum \"$UPS_input_voltage_maximum\"\n"
+			echo -en "VAR $UPSNAME input.sensitivity \"$UPS_input_sensitivity\"\n"
+			echo -en "VAR $UPSNAME input.transfer.high \"$UPS_input_transfer_high\"\n"
+			echo -en "VAR $UPSNAME input.transfer.low \"$UPS_input_transfer_low\"\n"
+			echo -en "VAR $UPSNAME input.frequency \"$UPS_input_frequency\"\n"
+			echo -en "VAR $UPSNAME input.frequency.nominal \"$UPS_input_frequency_nominal\"\n"
+			echo -en "VAR $UPSNAME input.transfer.reason \"$UPS_input_transfer_reason\"\n"
+
+			echo -en "VAR $UPSNAME output.voltage \"$UPS_output_voltage\"\n"
+			echo -en "VAR $UPSNAME output.voltage.nominal \"$UPS_output_voltage_nominal\"\n"
+			echo -en "VAR $UPSNAME output.current \"$UPS_output_current\"\n"
+
+
+			echo -en "VAR $UPSNAME server.info \"$UPS_server_info\"\n"
+
+			echo -en "VAR $UPSNAME ups.beeper.status \"enabled\"\n"
+
+			echo -en "END LIST VAR $UPSNAME\n"
+
+			log ">>> returned all VARs"
+
+		else #not a supported command
+
+			log ">>> failed to process command"
+			echo -en "ERR UNKNOWN-COMMAND\n"
+
 		fi
+		;;
+esac # "${COMMAND}"
 
-elif [ "$COMMAND" = "LIST VAR ups" ]; then			#requesting all values
-		getfulldata #get all values from apcaccess
-		echo -en "BEGIN LIST VAR ups\n"
-
-		echo -en "VAR ups device.mfr \"$UPS_MFR\"\n"
-		echo -en "VAR ups device.model \"$UPS_MODEL\"\n"
-		echo -en "VAR ups device.serial \"$UPS_SERIALNO\"\n"
-		echo -en "VAR ups device.type \"ups\"\n"
-
-		echo -en "VAR ups ups.mfr \"$UPS_MFR\"\n"
-		echo -en "VAR ups ups.mfr.date \"$UPS_MANDATE\"\n"
-		echo -en "VAR ups ups.id \"APC\"\n"
-		echo -en "VAR ups ups.vendorid \"051d\"\n"
-		echo -en "VAR ups ups.model \"$UPS_MODEL\"\n"
-		echo -en "VAR ups ups.status \"$UPS_STATUS\"\n"
-		echo -en "VAR ups ups.load \"$UPS_LOADPCT\"\n"
-		echo -en "VAR ups ups.serial \"$UPS_SERIALNO\"\n"
-		echo -en "VAR ups ups.firmware \"$UPS_FIRMWARE\"\n"
-		echo -en "VAR ups ups.firmware.aux \"$UPS_FIRMWARE\"\n"
-		echo -en "VAR ups ups.productid \"$UPS_APC\"\n"
-		echo -en "VAR ups ups.temperature \"$UPS_ITEMP\"\n"
-		echo -en "VAR ups ups.realpower.nominal \"$UPS_NOMPOWER\"\n"
-		echo -en "VAR ups ups.test.result \"$UPS_SELFTEST\"\n"
-		echo -en "VAR ups ups.delay.start \"0\"\n"
-		echo -en "VAR ups ups.delay.shutdown \"$UPS_DSHUTD\"\n"
-		echo -en "VAR ups ups.timer.reboot \"-1\"\n"
-		echo -en "VAR ups ups.timer.start \"-1\"\n"
-		echo -en "VAR ups ups.timer.shutdown \"-1\"\n"
-
-		echo -en "VAR ups battery.runtime \"$UPS_TIMELEFT\"\n"
-		echo -en "VAR ups battery.runtime.low \"$UPS_DLOWBATT\"\n"
-		echo -en "VAR ups battery.charge \"$UPS_BCHARGE\"\n"
-		echo -en "VAR ups battery.charge.low \"$UPS_MBATTCHG\"\n"
-		echo -en "VAR ups battery.charge.warning \"50\"\n"
-		echo -en "VAR ups battery.voltage \"$UPS_BATTV\"\n"
-		echo -en "VAR ups battery.voltage.nominal \"$UPS_NOMBATTV\"\n"
-		echo -en "VAR ups battery.date \"$UPS_BATTDATE\"\n"
-		echo -en "VAR ups battery.mfr.date \"$UPS_BATTDATE\"\n"
-		echo -en "VAR ups battery.temperature \"$UPS_ITEMP\"\n"
-		echo -en "VAR ups battery.type \"PbAc\"\n"
-
-		echo -en "VAR ups driver.name \"usbhid-ups\"\n" 
-		echo -en "VAR ups driver.version.internal \"apcupsd $UPS_VERSION\"\n"
-		echo -en "VAR ups driver.version.data \"$UPS_DRIVER\"\n"
-		echo -en "VAR ups driver.parameter.pollfreq \"60\"\n"
-		echo -en "VAR ups driver.parameter.pollinterval \"10\"\n"
-
-		echo -en "VAR ups input.voltage \"$UPS_LINEV\"\n"
-		echo -en "VAR ups input.voltage.nominal \"$UPS_NOMINV\"\n"
-		echo -en "VAR ups input.sensitivity \"$UPS_SENSE\"\n"
-		echo -en "VAR ups input.transfer.high \"$UPS_HITRANS\"\n"
-		echo -en "VAR ups input.transfer.low \"$UPS_LOTRANS\"\n"
-		echo -en "VAR ups input.frequency \"$UPS_LINEFREQ\"\n"
-		echo -en "VAR ups input.frequency.nominal \"50\"\n"
-		echo -en "VAR ups input.transfer.reason \"$UPS_LASTXFER\"\n"
-
-		echo -en "VAR ups output.voltage \"$UPS_OUTPUTV\"\n"
-		echo -en "VAR ups output.voltage.nominal \"$UPS_NOMOUTV\"\n"
-
-		echo -en "VAR ups server.info \"$HOSTNAME\"\n"
-
-		echo -en "VAR ups ups.beeper.status \"enabled\"\n"
-
-		echo -en "END LIST VAR ups\n"
-
-else
-		echo -en "ERR UNKNOWN-COMMAND\n"
-fi
 
 done
