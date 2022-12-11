@@ -206,7 +206,7 @@ if [ "$UPS_battery_date" = "" ]; then UPS_battery_date=$UPS_mfr_date; UPS_batter
 if [ "$UPS_mfr_date" = "" ]; then UPS_mfr_date=$UPS_battery_date; fi
 
 #if there is a value for the nominal output power, include it into the ups model name
-if ! [ "$UPS_ups_realpower_nominal" = "-1" ]; then UPS_device_model="$UPS_device_model ($UPS_ups_realpower_nominal W)"; fi
+if ! [ "$UPS_ups_realpower_nominal" = "-1" ]; then UPS_device_model="$UPS_device_model ($UPS_ups_realpower_nominal W)"; UPS_ups_model=${UPS_device_model}; fi
 
 IFS=$IFS_BAK
 }
