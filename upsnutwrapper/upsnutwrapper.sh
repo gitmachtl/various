@@ -263,7 +263,7 @@ esac
 
 log() {
 if [ "$LOGGING" = true ] ; then
-	echo -e "$(date)\t${TCPREMOTEIP}   \t${1}" >> "$LOG_FILE"
+	echo -e "$(date)\tREM_IP=${TCPREMOTEIP} \tPID=$$ \t${1}" >> "$LOG_FILE"
 fi
 }
 
