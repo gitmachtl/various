@@ -108,7 +108,7 @@ Simply comment/uncomment what fits your installation.
 Script:       upsnutwrapper.sh
 Author:       Martin (Machtl) Lang
 E-Mail:       martin@martinlang.at
-Github:       https://github.com/gitmachtl
+Github:       https://github.com/gitmachtl/various
 Version:      1.4 (10.12.2022)
 ```
   
