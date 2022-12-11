@@ -53,7 +53,7 @@ Please feel free to make this script better, patches/pull requests are welcome i
   1. Copy the script `upsnutwrapper.sh` into the directory `/usr/local/bin/` and make it executable.
      You can simply run these commands to copy the script to the right location:
      ``` console
-     wget https://raw.githubusercontent.com/gitmachtl/various/autodetect-nas/upsnutwrapper/upsnutwrapper.sh -O /usr/local/bin/upsnutwrapper.sh
+     wget https://raw.githubusercontent.com/gitmachtl/various/main/upsnutwrapper/upsnutwrapper.sh -O /usr/local/bin/upsnutwrapper.sh
      chmod +x /usr/local/bin/upsnutwrapper.sh
      ```
      &nbsp;<br>
