@@ -130,6 +130,7 @@ Wegpunkte können innerhalb GpsTalker mittels eigener Syntax editiert werden, hi
 |load waypoints| Lädt die *waypoints.json* Datei neu ein.<br>Dies ist sinnvoll falls geänderte Werte zurückgesetzt werden sollen. | `load waypoints` |
 |save waypoints| Speichert die aktuellen Wegpunktdaten in die *waypoints.json* Datei. | `save waypoints` |
 |waypoint `id` show|  Zeigt die aktuell eingestellten Daten für den Wegpunkt `id` an.|`waypoint 000 show`|
+|waypoint `id` delete|  Löscht den Wegpunkt mit der `id`.|`waypoint 123 delete`|
 |waypoint `id` new|  Legt einen neuen Wegpunkt mit der ID `id` an und setzt direkt die aktuellen GPS Koordinaten.|`waypoint 030 new`|
 |waypoint `id` new `lat` `lon`| Legt einen neuen Wegpunkt mit der ID `id` an und verwendet dafür die angegebene GPS Koordinaten.|`waypoint 120 new 45.1234 15.1234`|
 |waypoint `id` gps|  Setzt die aktuellen GPS Koordinaten für den Wegpunkt mit der ID `id`.|`waypoint 050 gps`|
