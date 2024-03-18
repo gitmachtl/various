@@ -370,6 +370,14 @@ case "${COMMAND}" in
 			UPSNAME=${BASH_REMATCH[1]}
 			log ">>> Requested upsdescription for UPSNAME=${UPSNAME}"
 
+			getfulldata #get all values from apcaccess
+			if [ $? -ne 0 ]; then
+				log ">>> Requesting fulldata via apcaccess failed!"
+				log ">>> Exiting script"
+				echo "ERR DRIVER-NOT-CONNECTED"
+				break #exiting the script
+			fi
+
 			echo -e "UPSDESC ${UPSNAME} \"${UPS_ups_desc}\""
 			
 
