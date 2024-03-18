@@ -77,6 +77,7 @@ UPS_battery_temperature=""
 UPS_battery_type="PbAc"
 UPS_battery_voltage="0"
 UPS_battery_voltage_nominal="0"
+UPS_device_description="UPS NUT Apcupsd Wrapper"
 UPS_device_mfr="UPS NUT Apcupsd Wrapper"
 UPS_device_model="NO MODEL"
 UPS_device_serial=""
@@ -102,7 +103,6 @@ UPS_output_voltage="0"
 UPS_output_voltage_nominal="0"
 UPS_server_info=$HOSTNAME
 UPS_ups_delay_shutdown="0"
-UPS_ups_desc="UPS NUT Apcupsd Wrapper"
 UPS_ups_firmware=""
 UPS_ups_firmware_aux=""
 UPS_ups_id="NO NAME"
@@ -378,7 +378,7 @@ case "${COMMAND}" in
 				break #exiting the script
 			fi
 
-			echo -e "UPSDESC ${UPSNAME} \"${UPS_ups_desc}\""
+			echo -e "UPSDESC ${UPSNAME} \"${UPS_device_description}\""
 			
 
 		elif [[ "${COMMAND}" =~ "LIST VAR "(.*)"" ]]; then #requesting all values
@@ -397,6 +397,7 @@ case "${COMMAND}" in
 
 			echo -en "BEGIN LIST VAR $UPSNAME\n"
 
+			echo -en "VAR $UPSNAME device.description \"$UPS_device_description\"\n"
 			echo -en "VAR $UPSNAME device.mfr \"$UPS_device_mfr\"\n"
 			echo -en "VAR $UPSNAME device.model \"$UPS_device_model\"\n"
 			echo -en "VAR $UPSNAME device.serial \"$UPS_device_serial\"\n"
