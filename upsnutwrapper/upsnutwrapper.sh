@@ -3,7 +3,7 @@
 # Script: 	upsnutwrapper.sh
 # Author:	Martin (Machtl) Lang
 # E-Mail:	martin@martinlang.at
-# Version:	1.5 (11.12.2022)
+# Version:	1.6 (18.03.2024)
 #
 # History:
 #
@@ -13,6 +13,7 @@
 #			1.3:	Pushed onto the github repo, little typo corrections (06.01.2022)
 #			1.4:	Added logging and QNAP support, cleaned up code
 #			1.5:	Better connection error handling, added some parameters
+#			1.6:	Added command "GET UPSDESC <upsname>"
 #
 # Description:
 #
@@ -101,6 +102,7 @@ UPS_output_voltage="0"
 UPS_output_voltage_nominal="0"
 UPS_server_info=$HOSTNAME
 UPS_ups_delay_shutdown="0"
+UPS_ups_desc="UPS NUT Apcupsd Wrapper"
 UPS_ups_firmware=""
 UPS_ups_firmware_aux=""
 UPS_ups_id="NO NAME"
@@ -163,6 +165,7 @@ for LINE in $APCACCESS; do
 
 	MODEL) 		UPS_device_model=$VALUE
 			UPS_ups_model=$VALUE
+			UPS_ups_desc=$VALUE
 			case "${VALUE}" in
 				*"Back-UPS XS 700U"*)	NOMPOWER="390";;
 				*"SMART-UPS 700"*)	NOMPOWER="450";;
@@ -361,6 +364,14 @@ case "${COMMAND}" in
                                         ;;
 
                         esac
+
+		elif [[ "${COMMAND}" =~ "GET UPSDESC "(.*)"" ]]; then #requesting ups description
+
+			UPSNAME=${BASH_REMATCH[1]}
+			log ">>> Requested upsdescription for UPSNAME=${UPSNAME}"
+
+			echo -e "UPSDESC ${UPSNAME} \"${UPS_ups_desc}\""
+			
 
 		elif [[ "${COMMAND}" =~ "LIST VAR "(.*)"" ]]; then #requesting all values
 
