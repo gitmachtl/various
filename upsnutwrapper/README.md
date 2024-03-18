@@ -109,7 +109,7 @@ Script:       upsnutwrapper.sh
 Author:       Martin (Machtl) Lang
 E-Mail:       martin@martinlang.at
 Github:       https://github.com/gitmachtl/various
-Version:      1.4 (10.12.2022)
+Version:      1.6 (18.03.2024)
 ```
   
 ### History:
@@ -119,4 +119,6 @@ Version:      1.4 (10.12.2022)
   1.2:	Added many parameters, First "release" version (15.02.2019)
   1.3:	Pushed onto the github repo, little typo corrections (06.01.2022)
   1.4:	Added logging and QNAP support, cleaned up code
+  1.5:  Better connection error handling, added some parameters
+  1.6:  Added command "GET UPSDESC <upsname>"
 ```
