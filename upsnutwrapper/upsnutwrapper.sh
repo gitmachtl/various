@@ -165,7 +165,7 @@ for LINE in $APCACCESS; do
 
 	MODEL) 		UPS_device_model=$VALUE
 			UPS_ups_model=$VALUE
-			UPS_ups_desc=$VALUE
+			UPS_device_description=$VALUE
 			case "${VALUE}" in
 				*"Back-UPS XS 700U"*)	NOMPOWER="390";;
 				*"SMART-UPS 700"*)	NOMPOWER="450";;
