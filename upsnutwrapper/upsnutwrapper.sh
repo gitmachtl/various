@@ -3,7 +3,7 @@
 # Script: 	upsnutwrapper.sh
 # Author:	Martin (Machtl) Lang
 # E-Mail:	martin@martinlang.at
-# Version:	1.6 (18.03.2024)
+# Version:	1.7 (20.03.2024)
 #
 # History:
 #
@@ -14,6 +14,7 @@
 #			1.4:	Added logging and QNAP support, cleaned up code
 #			1.5:	Better connection error handling, added some parameters
 #			1.6:	Added command "GET UPSDESC <upsname>"
+#			1.7:	Added command "GET DESC <upsname> <varname>" and all the descriptions for the variables
 #
 # Description:
 #
@@ -49,13 +50,18 @@
 #
 
 # Here you can set the apcupsd server address
-
 APCUPSDSERVER="localhost"		#apcupsd is running on the same machine
 #APCUPSDSERVER="127.0.0.1"		#apcupsd is running on the same machine
 #APCUPSDSERVER="remoteip:3551"		#apcupsd is running on a remote machine with ip "remoteip" on the port "3551"
 
-LOGGING=false				#set to 'true' to see incoming commands
+#Enable/Disable the logging to a logfile. Logging is turned off by default.
+LOGGING=false	#set to 'true' to see incoming commands
 LOG_FILE=/tmp/upsnutwrapper.log		#the location where logs are written to
+
+# List of available ups names presented to the NUT client. Only remove/change names here if needed!
+# Synology NAS devices need the name 'ups' in the list, QNAP NAS devices need the name 'qnapups' in the list. Default setting works for both.
+UPS_NAMES=("ups" "qnapups")
+
 
 
 #
@@ -63,58 +69,201 @@ LOG_FILE=/tmp/upsnutwrapper.log		#the location where logs are written to
 #
 #
 
-#define default values
+
+
+# define default values
 setdefaultvalues() {
 
-UPS_battery_charge="0"
-UPS_battery_charge_low="10"
-UPS_battery_charge_warning="50"
-UPS_battery_date=""
-UPS_battery_mfr_date=""
-UPS_battery_runtime="0"
-UPS_battery_runtime_low="10"
-UPS_battery_temperature=""
-UPS_battery_type="PbAc"
-UPS_battery_voltage="0"
-UPS_battery_voltage_nominal="0"
-UPS_device_description="UPS NUT Apcupsd Wrapper"
-UPS_device_mfr="UPS NUT Apcupsd Wrapper"
-UPS_device_model="NO MODEL"
-UPS_device_serial=""
-UPS_device_type="ups"
-UPS_driver_name="usbhid-ups"
-UPS_driver_parameter_pollfreq="60"
-UPS_driver_parameter_pollinterval="10"
-UPS_driver_version_data=""
-UPS_driver_version_internal="apcupsd"
-UPS_input_frequency=""
-UPS_input_frequency_nominal="50"
-UPS_input_sensitivity=""
-UPS_input_transfer_high=""
-UPS_input_transfer_low=""
-UPS_input_transfer_reason=""
-UPS_input_voltage="0"
-UPS_input_voltage_nominal="230"
-UPS_input_voltage_minimum="0"
-UPS_input_voltage_maximum="0"
-UPS_mfr_date=""
-UPS_output_current="0"
-UPS_output_voltage="0"
-UPS_output_voltage_nominal="0"
-UPS_server_info=$HOSTNAME
-UPS_ups_delay_shutdown="0"
-UPS_ups_firmware=""
-UPS_ups_firmware_aux=""
-UPS_ups_id="NO NAME"
-UPS_ups_load="0"
-UPS_ups_model="NO MODEL"
-UPS_ups_productid=""
-UPS_ups_realpower_nominal=$NOMPOWER
-UPS_ups_power_nominal=""
-UPS_ups_serial=""
-UPS_ups_temperature=""
-UPS_ups_test_date=""
-UPS_ups_test_result=""
+#-- battery values / description
+
+ UPS_battery_charge="0"
+DESC_battery_charge="Battery charge (percent)"
+
+ UPS_battery_charge_low="10"
+DESC_battery_charge_log="Remaining battery level when UPS switches to LB (percent)"
+
+ UPS_battery_charge_warning="50"
+DESC_battery_charge_warning="Battery level when UPS switches to "Warning" state (percent)"
+
+ UPS_battery_date=""
+DESC_battery_date="Battery manufacturing date (opaque string)"
+
+ UPS_battery_mfr_date=""
+DESC_battery_mfr_date="Battery manufacturing date (opaque string)"
+
+ UPS_battery_runtime="0"
+DESC_battery_runtime="Battery runtime (seconds)"
+
+ UPS_battery_runtime_low="10"
+DESC_battery_runtime_low="Remaining battery runtime when UPS switches to LB (seconds)"
+
+ UPS_battery_temperature=""
+DESC_battery_temperature="Battery temperature (degrees C)"
+
+ UPS_battery_type="PbAc"
+DESC_battery_type="Battery chemistry (opaque string)"
+
+ UPS_battery_voltage="0"
+DESC_battery_voltage="Battery voltage (V)"
+
+ UPS_battery_voltage_nominal="0"
+DESC_battery_voltage_nominal="Nominal battery voltage (V)"
+
+#-- device values / description
+
+ UPS_device_description="UPS NUT Apcupsd Wrapper"
+DESC_device_description="Description of the device (opaque string)"
+
+ UPS_device_mfr="UPS NUT Apcupsd Wrapper"
+DESC_device_mfr="Device manufacturer"
+
+ UPS_device_model="NO MODEL"
+DESC_device_model="UPS model"
+
+ UPS_device_serial=""
+DESC_device_serial="Device serial number (opaque string)"
+
+ UPS_device_type="ups"
+DESC_device_type="Device type (ups, pdu, scd, psu, ats)"
+
+#-- driver values / description
+
+ UPS_driver_name="usbhid-ups"
+DESC_driver_name="Driver name"
+
+ UPS_driver_parameter_pollfreq="60"
+DESC_driver_parameter_pollfreq="Driver poll frequency (seconds)"
+
+ UPS_driver_parameter_pollinterval="10"
+DESC_driver_parameter_pollinterval="Driver poll interval (seconds)"
+
+ UPS_driver_version_data=""
+DESC_driver_version_data="Version of the internal data mapping, for generic drivers"
+
+ UPS_driver_version_internal="apcupsd"
+DESC_driver_version_internal="Internal driver version"
+
+#-- input values / description
+
+ UPS_input_frequency=""
+DESC_input_frequency="Input line frequency (Hz)"
+
+ UPS_input_frequency_nominal="50"
+DESC_input_frequency_nominal="Nominal input line frequency (Hz)"
+
+ UPS_input_sensitivity=""
+DESC_input_sensitivity="Input power sensitivity"
+
+ UPS_input_transfer_high=""
+DESC_input_transfer_high="High voltage transfer point (V)"
+
+ UPS_input_transfer_low=""
+DESC_input_transfer_low="Low voltage transfer point (V)"
+
+ UPS_input_transfer_reason=""
+DESC_input_transfer_reason="Reason for last transfer to battery"
+
+ UPS_input_voltage="0"
+DESC_input_voltage="Input voltage (V)"
+
+ UPS_input_voltage_nominal="230"
+DESC_input_voltage_nominal="Nominal input voltage (V)"
+
+ UPS_input_voltage_minimum="0"
+DESC_input_voltage_minimum="Minimum incoming voltage seen (V)"
+
+ UPS_input_voltage_maximum="0"
+DESC_input_voltage_maximum="Maximum incoming voltage seen (V)"
+
+#-- mfr values / description
+
+ UPS_mfr_date=""
+DESC_mfr_date="UPS manufacturing date (opaque string)"
+
+#-- output values / description
+
+ UPS_output_current="0"
+DESC_output_current="Output current (A)"
+
+ UPS_output_voltage="0"
+DESC_output_voltage="Output voltage (V)"
+
+ UPS_output_voltage_nominal="0"
+DESC_output_voltage_nominal="Nominal output voltage (V)"
+
+#-- server values / description
+
+ UPS_server_info=$HOSTNAME
+DESC_server_info="Server information"
+
+#-- ups values / description
+
+ UPS_ups_status=""
+DESC_ups_status="UPS status"
+
+ UPS_ups_delay_start="0"
+DESC_ups_delay_shutdown="Interval to wait before restarting the load (seconds)"
+
+ UPS_ups_delay_shutdown="0"
+DESC_ups_delay_shutdown="Interval to wait after shutdown with delay command (seconds)"
+
+ UPS_ups_timer_reboot="-1"
+DESC_ups_timer_reboot="Time before the load will be rebooted (seconds)"
+
+ UPS_ups_timer_start"-1"
+DESC_ups_timer_start="Time before the load will be started (seconds)"
+
+ UPS_ups_timer_shutdown"-1"
+DESC_ups_timer_shutdown="Time before the load will be shutdown (seconds)"
+
+ UPS_ups_firmware=""
+DESC_ups_firmware="UPS firmware (opaque string)"
+
+ UPS_ups_firmware_aux=""
+DESC_ups_firmware_aux="Auxiliary device firmware"
+
+ UPS_ups_id="NO NAME"
+DESC_ups_id="UPS system identifier (opaque string)"
+
+ UPS_ups_vendorid="051d"
+DESC_ups_vendorid="Vendor ID for USB devices (opaque string)"
+
+ UPS_ups_load="0"
+DESC_ups_load="Load on UPS (percent)"
+
+ UPS_ups_mfr=${UPS_device_mfr}
+DESC_ups_mfr="UPS manufacturer"
+
+ UPS_ups_mfr_date=""
+DESC_ups_mfr_date="UPS manufacturing date (opaque string)"
+
+ UPS_ups_model="NO MODEL"
+DESC_ups_model="UPS model"
+
+ UPS_ups_productid=""
+DESC_ups_productid="Product ID for USB devices"
+
+ UPS_ups_realpower_nominal=$NOMPOWER
+DESC_ups_realpower_nominal="Nominal value of real power (Watts)"
+
+ UPS_ups_power_nominal=""
+DESC_ups_power_nominal="Nominal value of apparent power (Volt-Amps)"
+
+ UPS_ups_serial=""
+DESC_ups_serial="UPS serial number (opaque string)"
+
+ UPS_ups_temperature=""
+DESC_ups_temperature="UPS temperature (degrees C)"
+
+ UPS_ups_test_date=""
+DESC_ups_test_date="Date of last self test (opaque string)"
+
+ UPS_ups_test_result=""
+DESC_ups_test_result="Results of last self test (opaque string)"
+
+ UPS_ups_beeper_status=""
+DESC_ups_beeper_status="UPS beeper status (enabled, disabled or muted)"
+
 }
 
 getfulldata() {
@@ -189,7 +338,7 @@ for LINE in $APCACCESS; do
 	NOMBATTV) 	UPS_battery_voltage_nominal=$VALUE;;  			#battery voltage nominal [V]
 	SERIALNO)	UPS_device_serial=$VALUE; UPS_ups_serial=$VALUE;; #serialnumber of the ups
 	BATTDATE)	UPS_battery_date=$VALUE; UPS_battery_mfr_date=$VALUE;; #battery date
-	MANDATE)	UPS_mfr_date=$VALUE;;			#mfr date
+	MANDATE)	UPS_mfr_date=$VALUE; UPS_ups_mfr_date;;			#mfr date
 	FIRMWARE)	UPS_ups_firmware=$VALUE; UPS_ups_firmware_aux=$VALUE;; #firmwareversion
 	LOADPCT)	UPS_ups_load=$VALUE;;			#current load [%]
 	LINEV)		UPS_input_voltage=$VALUE; UPS_input_voltage_minimum=$VALUE; UPS_input_voltage_maximum=$VALUE;;	#input voltage [V], also set min/max voltage in case there is no separate data for that
@@ -213,6 +362,7 @@ for LINE in $APCACCESS; do
 	NOMPOWER)	UPS_ups_realpower_nominal=$VALUE;;			#output power nominal [W]
 	DSHUTD)		UPS_ups_delay_shutdown=$VALUE;;			#delay ups shutdown time [s]
 	LASTXFER)	UPS_input_transfer_reason=$VALUE;;			#reason for the last battery transfer
+	DWAKE)		UPS_ups_delay_start=$VALUE;;			#delay ups start time [s]
 
  esac
 
@@ -306,8 +456,13 @@ case "${COMMAND}" in
 			;;
 
 	"LIST UPS" ) #return a list of all UPSs to the client, in our case return the names "ups" for synology and "qnapups" for qnap
-			log ">>> Serving all the names of the UPSs"
-			echo -en "BEGIN LIST UPS\nUPS ups \"$UPS_device_mfr\"\nUPS qnapups \"$UPS_device_mfr\"\nEND LIST UPS\n"
+			log ">>> Serving all the names of the UPSs (${UPS_NAMES})"
+			echo -e "BEGIN LIST UPS"
+			for entryname in ${UPS_NAMES[@]}
+			do
+				echo -e "UPS ${entryname} \"$UPS_device_mfr\""
+			done
+			echo -e "END LIST UPS"
 			;;
 
 	*) #continue with specific commands
@@ -317,7 +472,7 @@ case "${COMMAND}" in
 			UPSNAME=${BASH_REMATCH[1]}
 			VAR=${BASH_REMATCH[2]}
 
-			log ">>> Requested VAR=${VAR} for UPSNAME=${UPSNAME}"
+			log ">>> Requested value for VAR=${VAR} for UPSNAME=${UPSNAME}"
 
                         case "${VAR}" in
 
@@ -365,6 +520,21 @@ case "${COMMAND}" in
 
                         esac
 
+		elif [[ "${COMMAND}" =~ "GET DESC "(.*)" "(.*)"" ]]; then #requesting the description for a specific value
+
+			UPSNAME=${BASH_REMATCH[1]}
+			VAR=${BASH_REMATCH[2]}
+			log ">>> Requested description for VAR=${VAR} for UPSNAME=${UPSNAME}"
+            local_var="DESC_${VAR//./_}"; #substitute the . with _ -> example ups.status -> local_var="DESC_ups_status"
+            if [ ! -z ${!local_var+x} ]; then #DESC variable exists, return it
+				log ">>> returned desc for ${local_var}=${!local_var}"
+				echo -e "DESC ${UPSNAME} ${VAR} \"${!local_var}\""
+			else #DESC variable does not exist, return an empty string
+				log ">>> no description found for variable ${VAR} (${local_var})"
+				echo -e "DESC ${UPSNAME} ${VAR} \"\"" #return an empty string
+            fi
+
+
 		elif [[ "${COMMAND}" =~ "GET UPSDESC "(.*)"" ]]; then #requesting ups description
 
 			UPSNAME=${BASH_REMATCH[1]}
@@ -406,7 +576,7 @@ case "${COMMAND}" in
 			echo -en "VAR $UPSNAME ups.mfr \"$UPS_device_mfr\"\n"
 			echo -en "VAR $UPSNAME ups.mfr.date \"$UPS_mfr_date\"\n"
 			echo -en "VAR $UPSNAME ups.id \"$UPS_ups_id\"\n"
-			echo -en "VAR $UPSNAME ups.vendorid \"051d\"\n"
+			echo -en "VAR $UPSNAME ups.vendorid \"$UPS_ups_vendorid\"\n"
 			echo -en "VAR $UPSNAME ups.model \"$UPS_ups_model\"\n"
 			echo -en "VAR $UPSNAME ups.status \"$UPS_ups_status\"\n"
 			echo -en "VAR $UPSNAME ups.load \"$UPS_ups_load\"\n"
@@ -419,11 +589,11 @@ case "${COMMAND}" in
 			echo -en "VAR $UPSNAME ups.realpower.nominal \"$UPS_ups_realpower_nominal\"\n"
 			echo -en "VAR $UPSNAME ups.test.date \"$UPS_ups_test_date\"\n"
 			echo -en "VAR $UPSNAME ups.test.result \"$UPS_ups_test_result\"\n"
-			echo -en "VAR $UPSNAME ups.delay.start \"0\"\n"
+			echo -en "VAR $UPSNAME ups.delay.start \"$UPS_ups_delay_start\"\n"
 			echo -en "VAR $UPSNAME ups.delay.shutdown \"$UPS_ups_delay_shutdown\"\n"
-			echo -en "VAR $UPSNAME ups.timer.reboot \"-1\"\n"
-			echo -en "VAR $UPSNAME ups.timer.start \"-1\"\n"
-			echo -en "VAR $UPSNAME ups.timer.shutdown \"-1\"\n"
+			echo -en "VAR $UPSNAME ups.timer.reboot \"$UPS_ups_timer_reboot\"\n"
+			echo -en "VAR $UPSNAME ups.timer.start \"$UPS_ups_timer_start\"\n"
+			echo -en "VAR $UPSNAME ups.timer.shutdown \"$UPS_ups_timer_shutdown\"\n"
 
 			echo -en "VAR $UPSNAME battery.runtime \"$UPS_battery_runtime\"\n"
 			echo -en "VAR $UPSNAME battery.runtime.low \"$UPS_battery_runtime_low\"\n"
