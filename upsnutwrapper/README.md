@@ -109,7 +109,7 @@ Script:       upsnutwrapper.sh
 Author:       Martin (Machtl) Lang
 E-Mail:       martin@martinlang.at
 Github:       https://github.com/gitmachtl/various
-Version:      1.10 (22.03.2024)
+Version:      1.11 (22.03.2024)
 ```
   
 ### History:
