@@ -4,7 +4,7 @@
 # Author:	Martin (Machtl) Lang
 # E-Mail:	martin@martinlang.at
 
-SCRIPT_VERSION="1.9 (22.03.2024)"
+SCRIPT_VERSION="1.10 (22.03.2024)"
 
 #
 # History:
@@ -148,7 +148,7 @@ DESC_driver_version_internal="Internal driver version"
 
 #-- input values / description
 
- UPS_input_frequency=""
+ UPS_input_frequency="0"
 DESC_input_frequency="Input line frequency (Hz)"
 
  UPS_input_frequency_nominal="50"
@@ -461,9 +461,13 @@ while : ; do
 read -sr INSTRING	#read in then provided command
 
 COMMAND="${INSTRING%%[[:cntrl:]]}" #strip any control chars like "new line", etc. from them command
-log "$COMMAND"
+COMMAND=${COMMAND//[![:print:]]/} #strip non printable chars
+
+if [[ "${COMMAND}" != "" ]]; then log "$COMMAND"; fi #only log non empty commands
 
 case "${COMMAND}" in
+
+        "") echo "";; # do nothing on empty commands
 
 	"LOGIN"*|"USERNAME"*|"PASSWORD"* ) # login, accepting all usernames and passwords
 			log ">>> ${COMMAND} OK"
