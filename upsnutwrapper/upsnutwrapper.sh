@@ -4,7 +4,7 @@
 # Author:	Martin (Machtl) Lang
 # E-Mail:	martin@martinlang.at
 
-SCRIPT_VERSION="1.10 (22.03.2024)"
+SCRIPT_VERSION="1.11 (22.03.2024)"
 
 #
 # History:
@@ -20,6 +20,7 @@ SCRIPT_VERSION="1.10 (22.03.2024)"
 #			1.8:	Added commands "VER", "NETVER", "PROTVER", "LIST CLIENT", "LIST RW", "LIST CMD", "LIST ENUM"
 #			1.9:	Added power and apntpower calculation, removed timer variables
 #			1.10:   Better WinNUT support. WinNUT does not like empty input.frequency
+#			1.11:	Limit apcaccess poll interval to 10 seconds. Some clients request single parameters, which could stress apcaccess.
 #
 # Description:
 #
@@ -275,10 +276,17 @@ DESC_ups_beeper_status="UPS beeper status (enabled, disabled or muted)"
 # ---------------------------------------
 getfulldata() {
 
+#Do a check about the last time a successful was done and limit the poll interval to 10 seconds
+let APCACCESS_poll_interval=${SECONDS}-${APCACCESS_last_poll_time};
+if [ ${APCACCESS_poll_interval} -lt 10 ]; then return 0; fi #poll was made within 10 seconds from the last time, so don't update the parameters, exit function
+
 setdefaultvalues	#load default values
 
+log ">>> Poll parameters via apcaccess (interval ${APCACCESS_poll_interval}s)"
 APCACCESS="$(apcaccess -h $APCUPSDSERVER -u 2> /dev/null)"	#get data from acpaccess
-if [ $? -ne 0 ]; then return 1; fi #exit with errorcode 1 if something with the connection is wrong
+if [ $? -ne 0 ]; then log ">>> FAILED to poll parameters: ${APCACCESS}"; return 1; fi #exit with errorcode 1 if something with the connection is wrong
+APCACCESS_last_poll_time=${SECONDS} #save current seconds for the successfull data poll
+
 APCACCESS=$(sort <<< "${APCACCESS}") #sort it so for example BCHARGE will be processed before STATUS
 
 IFS_BAK=$IFS					# change delimiter (IFS) to new line.
@@ -393,7 +401,7 @@ IFS=$IFS_BAK
 }
 
 # ---------------------------------------------------
-# get the data for a specific variable via apcaccess
+# get the data for the STATUS variable via apcaccess
 # ---------------------------------------------------
 getstatusdata() {
 APCACCESS="$(apcaccess -h $APCUPSDSERVER -p STATUS 2> /dev/null)"
@@ -453,6 +461,7 @@ fi
 #some vars
 PROTOCOL_VERSION="1.2" #currently emulated NUT procotol version
 BATTNOTFULL=0	#we start the script thinking of a full battery
+APCACCESS_last_poll_time=-10 #initialize last time a successful poll was made via apcaccess
 unset x		#important for the check ${!local_var+x} later on
 
 setdefaultvalues	#load default values

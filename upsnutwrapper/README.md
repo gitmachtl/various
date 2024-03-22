@@ -125,4 +125,5 @@ Version:      1.10 (22.03.2024)
   1.8:  Added commands "VER", "NETVER", "PROTVER", "LIST CLIENT", "LIST RW", "LIST CMD", "LIST ENUM"
   1.9:  Added power and apntpower calculation, removed timer variables
   1.10:  Better WinNUT support. WinNUT does not like empty input.frequency
+  1.11:  Limit apcaccess poll interval to 10 seconds. Some clients request single parameters, which could stress apcaccess.
 ```
