@@ -4,7 +4,7 @@
 # Author:	Martin (Machtl) Lang
 # E-Mail:	martin@martinlang.at
 
-SCRIPT_VERSION="1.8 (21.03.2024)"
+SCRIPT_VERSION="1.9 (22.03.2024)"
 
 #
 # History:
@@ -18,6 +18,7 @@ SCRIPT_VERSION="1.8 (21.03.2024)"
 #			1.6:	Added command "GET UPSDESC <upsname>"
 #			1.7:	Added command "GET DESC <upsname> <varname>" and all the descriptions for the variables
 #			1.8:	Added commands "VER", "NETVER", "PROTVER", "LIST CLIENT", "LIST RW", "LIST CMD", "LIST ENUM"
+#			1.9:	Added power and apntpower calculation, removed timer variables
 #
 # Description:
 #
@@ -209,15 +210,6 @@ DESC_ups_delay_start="Interval to wait before restarting the load (seconds)"
  UPS_ups_delay_shutdown="0"
 DESC_ups_delay_shutdown="Interval to wait after shutdown with delay command (seconds)"
 
- UPS_ups_timer_reboot="-1"
-DESC_ups_timer_reboot="Time before the load will be rebooted (seconds)"
-
- UPS_ups_timer_start="-1"
-DESC_ups_timer_start="Time before the load will be started (seconds)"
-
- UPS_ups_timer_shutdown="-1"
-DESC_ups_timer_shutdown="Time before the load will be shutdown (seconds)"
-
  UPS_ups_firmware=""
 DESC_ups_firmware="UPS firmware (opaque string)"
 
@@ -233,6 +225,9 @@ DESC_ups_vendorid="Vendor ID for USB devices (opaque string)"
  UPS_ups_load="0"
 DESC_ups_load="Load on UPS (percent)"
 
+ UPS_ups_load_apnt="0"
+DESC_ups_load_apnt="Apparent load on UPS (percent)"
+
  UPS_ups_mfr=${UPS_device_mfr}
 DESC_ups_mfr="UPS manufacturer"
 
@@ -245,11 +240,17 @@ DESC_ups_model="UPS model"
  UPS_ups_productid=""
 DESC_ups_productid="Product ID for USB devices"
 
- UPS_ups_realpower_nominal=$NOMPOWER
-DESC_ups_realpower_nominal="Nominal value of real power (Watts)"
+ UPS_ups_power="0"
+DESC_ups_power="Currentvalue of apparent power (Volt-Amps)"
 
- UPS_ups_power_nominal=""
+ UPS_ups_power_nominal="0"
 DESC_ups_power_nominal="Nominal value of apparent power (Volt-Amps)"
+
+ UPS_ups_realpower="0"
+DESC_ups_realpower="Current value of real power (Watts)"
+
+ UPS_ups_realpower_nominal="0"
+DESC_ups_realpower_nominal="Nominal value of real power (Watts)"
 
  UPS_ups_serial=""
 DESC_ups_serial="UPS serial number (opaque string)"
@@ -317,16 +318,7 @@ for LINE in $APCACCESS; do
 
 	UPSNAME) 	UPS_ups_id=$VALUE;;
 
-	MODEL) 		UPS_device_model=$VALUE
-			UPS_ups_model=$VALUE
-			UPS_device_description=$VALUE
-			case "${VALUE}" in
-				*"Back-UPS XS 700U"*)	NOMPOWER="390";;
-				*"SMART-UPS 700"*)	NOMPOWER="450";;
-				*"Smart-UPS C 1500"*)	NOMPOWER="900";;
-			esac
-			UPS_ups_realpower_nominal=$NOMPOWER;
-			;;
+	MODEL) 		UPS_device_model=$VALUE; UPS_ups_model=$VALUE; UPS_device_description=$VALUE;;
 
 	SELFTEST)
 			case "${VALUE}" in
@@ -343,9 +335,10 @@ for LINE in $APCACCESS; do
 	NOMBATTV) 	UPS_battery_voltage_nominal=$VALUE;;  			#battery voltage nominal [V]
 	SERIALNO)	UPS_device_serial=$VALUE; UPS_ups_serial=$VALUE;; #serialnumber of the ups
 	BATTDATE)	UPS_battery_date=$VALUE; UPS_battery_mfr_date=$VALUE;; #battery date
-	MANDATE)	UPS_mfr_date=$VALUE; UPS_ups_mfr_date;;			#mfr date
+	MANDATE)	UPS_mfr_date=$VALUE; UPS_ups_mfr_date=$VALUE;;			#mfr date
 	FIRMWARE)	UPS_ups_firmware=$VALUE; UPS_ups_firmware_aux=$VALUE;; #firmwareversion
 	LOADPCT)	UPS_ups_load=$VALUE;;			#current load [%]
+	LOADAPNT)	UPS_ups_load_apnt=$VALUE;;			#current apparent load [%]
 	LINEV)		UPS_input_voltage=$VALUE; UPS_input_voltage_minimum=$VALUE; UPS_input_voltage_maximum=$VALUE;;	#input voltage [V], also set min/max voltage in case there is no separate data for that
 	MINLINEV)	UPS_input_voltage_minimum=$VALUE;;		#input voltage [V]
 	MAXLINEV)	UPS_input_voltage_maximum=$VALUE;;		#input voltage [V]
@@ -377,8 +370,23 @@ done  #for
 if [ "$UPS_battery_date" = "" ]; then UPS_battery_date=$UPS_mfr_date; UPS_battery_mfr_date=$UPS_mfr_date; fi
 if [ "$UPS_mfr_date" = "" ]; then UPS_mfr_date=$UPS_battery_date; fi
 
-#if there is a value for the nominal output power, include it into the ups model name
-if ! [ "$UPS_ups_realpower_nominal" = "-1" ]; then UPS_device_model="$UPS_device_model ($UPS_ups_realpower_nominal W)"; UPS_ups_model=${UPS_device_model}; fi
+#small ups database to also have nominal power values if not reported back via apcaccess
+case "${UPS_device_model}" in
+	*"Back-UPS XS 700U"*)	UPS_ups_realpower_nominal="390"; UPS_ups_power_nominal="700";;
+	*"SMART-UPS 700"*)		UPS_ups_realpower_nominal="450"; UPS_ups_power_nominal="700";;
+	*"Smart-UPS C 1500"*)	UPS_ups_realpower_nominal="900"; UPS_ups_power_nominal="1500";;
+	*"Back-UPS RS 1500"*)	UPS_ups_realpower_nominal="865"; UPS_ups_power_nominal="1500";;
+esac
+
+#if there is a value for the nominal output power, include it into the ups model name. also calculate the current realpower
+if ! [ "$UPS_ups_realpower_nominal" = "0" ]; then 
+	UPS_device_model="$UPS_device_model ($UPS_ups_realpower_nominal W)";
+	UPS_ups_model=${UPS_device_model};
+fi
+
+#calculate the current power
+let UPS_ups_realpower=(${UPS_ups_load%%.*}*${UPS_ups_realpower_nominal})/100; #use the LOADPCT without decimals
+let UPS_ups_power=(${UPS_ups_load_apnt%%.*}*${UPS_ups_power_nominal})/100; #use the LOADAPNT without decimals
 
 IFS=$IFS_BAK
 }
@@ -444,7 +452,6 @@ fi
 #some vars
 PROTOCOL_VERSION="1.2" #currently emulated NUT procotol version
 BATTNOTFULL=0	#we start the script thinking of a full battery
-NOMPOWER="-1"	#no nominal power value present
 unset x		#important for the check ${!local_var+x} later on
 
 setdefaultvalues	#load default values
@@ -639,15 +646,14 @@ case "${COMMAND}" in
 			echo -e "VAR $UPSNAME ups.firmware.aux \"$UPS_ups_firmware_aux\""
 			echo -e "VAR $UPSNAME ups.productid \"$UPS_ups_productid\""
 			echo -e "VAR $UPSNAME ups.temperature \"$UPS_ups_temperature\""
+			echo -e "VAR $UPSNAME ups.power \"$UPS_ups_power\""
 			echo -e "VAR $UPSNAME ups.power.nominal \"$UPS_ups_power_nominal\""
+			echo -e "VAR $UPSNAME ups.realpower \"$UPS_ups_realpower\""
 			echo -e "VAR $UPSNAME ups.realpower.nominal \"$UPS_ups_realpower_nominal\""
 			echo -e "VAR $UPSNAME ups.test.date \"$UPS_ups_test_date\""
 			echo -e "VAR $UPSNAME ups.test.result \"$UPS_ups_test_result\""
 			echo -e "VAR $UPSNAME ups.delay.start \"$UPS_ups_delay_start\""
 			echo -e "VAR $UPSNAME ups.delay.shutdown \"$UPS_ups_delay_shutdown\""
-			echo -e "VAR $UPSNAME ups.timer.reboot \"$UPS_ups_timer_reboot\""
-			echo -e "VAR $UPSNAME ups.timer.start \"$UPS_ups_timer_start\""
-			echo -e "VAR $UPSNAME ups.timer.shutdown \"$UPS_ups_timer_shutdown\""
 
 			echo -e "VAR $UPSNAME battery.runtime \"$UPS_battery_runtime\""
 			echo -e "VAR $UPSNAME battery.runtime.low \"$UPS_battery_runtime_low\""
