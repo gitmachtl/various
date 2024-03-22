@@ -19,6 +19,7 @@ SCRIPT_VERSION="1.10 (22.03.2024)"
 #			1.7:	Added command "GET DESC <upsname> <varname>" and all the descriptions for the variables
 #			1.8:	Added commands "VER", "NETVER", "PROTVER", "LIST CLIENT", "LIST RW", "LIST CMD", "LIST ENUM"
 #			1.9:	Added power and apntpower calculation, removed timer variables
+#			1.10:   Better WinNUT support. WinNUT does not like empty input.frequency
 #
 # Description:
 #
