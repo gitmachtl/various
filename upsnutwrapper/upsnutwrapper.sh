@@ -505,7 +505,8 @@ case "${COMMAND}" in
 			;;
 
 	"LIST UPS" ) #return a list of all UPSs to the client. returns "ups" for synology and "qnapups" for qnap by default
-			log ">>> Serving all the names of the UPSs (${UPS_NAMES})"
+			ALL_UPS_NAMES=${UPS_NAMES[@]}
+			log ">>> Serving all the names of the UPSs (${ALL_UPS_NAMES})"
 			echo -e "BEGIN LIST UPS"
 			for entryname in ${UPS_NAMES[@]}
 			do
