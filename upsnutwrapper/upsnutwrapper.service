@@ -1,0 +1,15 @@
+# See: https://github.com/gitmachtl/various/tree/main/upsnutwrapper
+# Also: /usr/local/bin/upsnutwrapper.sh
+
+[Unit]
+Description=Adapter layer on top apcuspd to emulate NUT network protocol
+Requires=network.target
+Before=shutdown.target reboot.target
+After=apcupsd.service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/tcpserver -q -c 10 -HR 0.0.0.0 3493 /usr/local/bin/upsnutwrapper.sh &
+
+[Install]
+WantedBy=multi-user.target
