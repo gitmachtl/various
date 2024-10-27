@@ -139,21 +139,22 @@ Script:       upsnutwrapper.sh
 Author:       Martin (Machtl) Lang
 E-Mail:       martin@martinlang.at
 Github:       https://github.com/gitmachtl/various
-Version:      1.11 (22.03.2024)
+Version:      1.12 (27.10.2024)
 ```
   
 ### History:
 ```
-  1.0:	First working version "yeah"
-  1.1:	Changed the "apcaccess" call and added the option "-u"
-  1.2:	Added many parameters, First "release" version (15.02.2019)
-  1.3:	Pushed onto the github repo, little typo corrections (06.01.2022)
-  1.4:	Added logging and QNAP support, cleaned up code
-  1.5:  Better connection error handling, added some parameters
-  1.6:  Added command "GET UPSDESC <upsname>"
-  1.7:  Added command "GET DESC <upsname> <varname>" and all the descriptions for the variables
-  1.8:  Added commands "VER", "NETVER", "PROTVER", "LIST CLIENT", "LIST RW", "LIST CMD", "LIST ENUM"
-  1.9:  Added power and apntpower calculation, removed timer variables
+  1.0:	 First working version "yeah"
+  1.1:	 Changed the "apcaccess" call and added the option "-u"
+  1.2:	 Added many parameters, First "release" version (15.02.2019)
+  1.3:	 Pushed onto the github repo, little typo corrections (06.01.2022)
+  1.4:	 Added logging and QNAP support, cleaned up code
+  1.5:   Better connection error handling, added some parameters
+  1.6:   Added command "GET UPSDESC <upsname>"
+  1.7:   Added command "GET DESC <upsname> <varname>" and all the descriptions for the variables
+  1.8:   Added commands "VER", "NETVER", "PROTVER", "LIST CLIENT", "LIST RW", "LIST CMD", "LIST ENUM"
+  1.9:   Added power and apntpower calculation, removed timer variables
   1.10:  Better WinNUT support. WinNUT does not like empty input.frequency
   1.11:  Limit apcaccess poll interval to 10 seconds. Some clients request single parameters, which could stress apcaccess.
+  1.12:  Optimized output for the "LIST VAR <upsname>" command. Switched from multiple echo statements to a "cat <<- EOF" statement
 ```

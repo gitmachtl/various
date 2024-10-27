@@ -4,7 +4,7 @@
 # Author:	Martin (Machtl) Lang
 # E-Mail:	martin@martinlang.at
 
-SCRIPT_VERSION="1.11 (22.03.2024)"
+SCRIPT_VERSION="1.12 (27.10.2024)"
 
 #
 # History:
@@ -21,6 +21,7 @@ SCRIPT_VERSION="1.11 (22.03.2024)"
 #			1.9:	Added power and apntpower calculation, removed timer variables
 #			1.10:   Better WinNUT support. WinNUT does not like empty input.frequency
 #			1.11:	Limit apcaccess poll interval to 10 seconds. Some clients request single parameters, which could stress apcaccess.
+#			1.12:	Optimized output for the "LIST VAR <upsname>" command. Switched from multiple echo statements to a "cat <<- EOF" statement
 #
 # Description:
 #
@@ -598,7 +599,7 @@ case "${COMMAND}" in
 				break #exiting the script
 			fi
 			echo -e "UPSDESC ${UPSNAME} \"${UPS_device_description}\""
-			
+
 
 		elif [[ "${COMMAND}" =~ "LIST CLIENT "(.*)"" ]]; then #requesting client ip address
 
@@ -613,7 +614,7 @@ case "${COMMAND}" in
 			log ">>> Requested writable variable list for UPSNAME=${UPSNAME}"
 			echo -e "BEGIN LIST RW ${UPSNAME}\nEND LIST RW ${UPSNAME}" #return an empty list, not supported in this script
 
-			
+
 		elif [[ "${COMMAND}" =~ "LIST CMD "(.*)"" ]]; then #requesting command list
 
 			UPSNAME=${BASH_REMATCH[1]}
@@ -627,7 +628,7 @@ case "${COMMAND}" in
 			VAR=${BASH_REMATCH[2]}
 			log ">>> Requested ENUM list for VAR=${VAR} for UPSNAME=${UPSNAME}"
 			echo -e "BEGIN LIST ENUM ${UPSNAME} ${VAR}\nEND LIST ENUM ${UPSNAME} ${VAR}" #return an empty list, not supported in this script
-			
+
 
 		elif [[ "${COMMAND}" =~ "LIST VAR "(.*)"" ]]; then #requesting all values
 
@@ -641,75 +642,67 @@ case "${COMMAND}" in
 				break #exiting the script
 			fi
 
-			echo -e "BEGIN LIST VAR $UPSNAME"
-
-			echo -e "VAR $UPSNAME device.description \"$UPS_device_description\""
-			echo -e "VAR $UPSNAME device.mfr \"$UPS_device_mfr\""
-			echo -e "VAR $UPSNAME device.model \"$UPS_device_model\""
-			echo -e "VAR $UPSNAME device.serial \"$UPS_device_serial\""
-			echo -e "VAR $UPSNAME device.type \"$UPS_device_type\""
-
-			echo -e "VAR $UPSNAME ups.mfr \"$UPS_device_mfr\""
-			echo -e "VAR $UPSNAME ups.mfr.date \"$UPS_mfr_date\""
-			echo -e "VAR $UPSNAME ups.id \"$UPS_ups_id\""
-			echo -e "VAR $UPSNAME ups.vendorid \"$UPS_ups_vendorid\""
-			echo -e "VAR $UPSNAME ups.model \"$UPS_ups_model\""
-			echo -e "VAR $UPSNAME ups.status \"$UPS_ups_status\""
-			echo -e "VAR $UPSNAME ups.load \"$UPS_ups_load\""
-			echo -e "VAR $UPSNAME ups.serial \"$UPS_ups_serial\""
-			echo -e "VAR $UPSNAME ups.firmware \"$UPS_ups_firmware\""
-			echo -e "VAR $UPSNAME ups.firmware.aux \"$UPS_ups_firmware_aux\""
-			echo -e "VAR $UPSNAME ups.productid \"$UPS_ups_productid\""
-			echo -e "VAR $UPSNAME ups.temperature \"$UPS_ups_temperature\""
-			echo -e "VAR $UPSNAME ups.power \"$UPS_ups_power\""
-			echo -e "VAR $UPSNAME ups.power.nominal \"$UPS_ups_power_nominal\""
-			echo -e "VAR $UPSNAME ups.realpower \"$UPS_ups_realpower\""
-			echo -e "VAR $UPSNAME ups.realpower.nominal \"$UPS_ups_realpower_nominal\""
-			echo -e "VAR $UPSNAME ups.test.date \"$UPS_ups_test_date\""
-			echo -e "VAR $UPSNAME ups.test.result \"$UPS_ups_test_result\""
-			echo -e "VAR $UPSNAME ups.delay.start \"$UPS_ups_delay_start\""
-			echo -e "VAR $UPSNAME ups.delay.shutdown \"$UPS_ups_delay_shutdown\""
-
-			echo -e "VAR $UPSNAME battery.runtime \"$UPS_battery_runtime\""
-			echo -e "VAR $UPSNAME battery.runtime.low \"$UPS_battery_runtime_low\""
-			echo -e "VAR $UPSNAME battery.charge \"$UPS_battery_charge\""
-			echo -e "VAR $UPSNAME battery.charge.low \"$UPS_battery_charge_low\""
-			echo -e "VAR $UPSNAME battery.charge.warning \"$UPS_battery_charge_warning\""
-			echo -e "VAR $UPSNAME battery.voltage \"$UPS_battery_voltage\""
-			echo -e "VAR $UPSNAME battery.voltage.nominal \"$UPS_battery_voltage_nominal\""
-			echo -e "VAR $UPSNAME battery.date \"$UPS_battery_date\""
-			echo -e "VAR $UPSNAME battery.mfr.date \"$UPS_battery_date\""
-			echo -e "VAR $UPSNAME battery.temperature \"$UPS_battery_temperature\""
-			echo -e "VAR $UPSNAME battery.type \"$UPS_battery_type\""
-
-			echo -e "VAR $UPSNAME driver.name \"$UPS_driver_name\""
-			echo -e "VAR $UPSNAME driver.version.internal \"$UPS_driver_version_internal\""
-			echo -e "VAR $UPSNAME driver.version.data \"$UPS_driver_version_data\""
-			echo -e "VAR $UPSNAME driver.parameter.pollfreq \"$UPS_driver_parameter_pollfreq\""
-			echo -e "VAR $UPSNAME driver.parameter.pollinterval \"$UPS_driver_parameter_pollinterval\""
-
-			echo -e "VAR $UPSNAME input.voltage \"$UPS_input_voltage\""
-			echo -e "VAR $UPSNAME input.voltage.nominal \"$UPS_input_voltage_nominal\""
-			echo -e "VAR $UPSNAME input.voltage.minimum \"$UPS_input_voltage_minimum\""
-			echo -e "VAR $UPSNAME input.voltage.maximum \"$UPS_input_voltage_maximum\""
-			echo -e "VAR $UPSNAME input.sensitivity \"$UPS_input_sensitivity\""
-			echo -e "VAR $UPSNAME input.transfer.high \"$UPS_input_transfer_high\""
-			echo -e "VAR $UPSNAME input.transfer.low \"$UPS_input_transfer_low\""
-			echo -e "VAR $UPSNAME input.frequency \"$UPS_input_frequency\""
-			echo -e "VAR $UPSNAME input.frequency.nominal \"$UPS_input_frequency_nominal\""
-			echo -e "VAR $UPSNAME input.transfer.reason \"$UPS_input_transfer_reason\""
-
-			echo -e "VAR $UPSNAME output.voltage \"$UPS_output_voltage\""
-			echo -e "VAR $UPSNAME output.voltage.nominal \"$UPS_output_voltage_nominal\""
-			echo -e "VAR $UPSNAME output.current \"$UPS_output_current\""
-
-
-			echo -e "VAR $UPSNAME server.info \"$UPS_server_info\""
-
-			echo -e "VAR $UPSNAME ups.beeper.status \"enabled\""
-
-			echo -e "END LIST VAR $UPSNAME"
-
+			#optimized output for the whole list of parameters (v
+			cat <<- EOF
+BEGIN LIST VAR $UPSNAME
+VAR $UPSNAME device.description "$UPS_device_description"
+VAR $UPSNAME device.mfr "$UPS_device_mfr"
+VAR $UPSNAME device.model "$UPS_device_model"
+VAR $UPSNAME device.serial "$UPS_device_serial"
+VAR $UPSNAME device.type "$UPS_device_type"
+VAR $UPSNAME ups.mfr "$UPS_device_mfr"
+VAR $UPSNAME ups.mfr.date "$UPS_mfr_date"
+VAR $UPSNAME ups.id "$UPS_ups_id"
+VAR $UPSNAME ups.vendorid "$UPS_ups_vendorid"
+VAR $UPSNAME ups.model "$UPS_ups_model"
+VAR $UPSNAME ups.status "$UPS_ups_status"
+VAR $UPSNAME ups.load "$UPS_ups_load"
+VAR $UPSNAME ups.serial "$UPS_ups_serial"
+VAR $UPSNAME ups.firmware "$UPS_ups_firmware"
+VAR $UPSNAME ups.firmware.aux "$UPS_ups_firmware_aux"
+VAR $UPSNAME ups.productid "$UPS_ups_productid"
+VAR $UPSNAME ups.temperature "$UPS_ups_temperature"
+VAR $UPSNAME ups.power "$UPS_ups_power"
+VAR $UPSNAME ups.power.nominal "$UPS_ups_power_nominal"
+VAR $UPSNAME ups.realpower "$UPS_ups_realpower"
+VAR $UPSNAME ups.realpower.nominal "$UPS_ups_realpower_nominal"
+VAR $UPSNAME ups.test.date "$UPS_ups_test_date"
+VAR $UPSNAME ups.test.result "$UPS_ups_test_result"
+VAR $UPSNAME ups.delay.start "$UPS_ups_delay_start"
+VAR $UPSNAME ups.delay.shutdown "$UPS_ups_delay_shutdown"
+VAR $UPSNAME battery.runtime "$UPS_battery_runtime"
+VAR $UPSNAME battery.runtime.low "$UPS_battery_runtime_low"
+VAR $UPSNAME battery.charge "$UPS_battery_charge"
+VAR $UPSNAME battery.charge.low "$UPS_battery_charge_low"
+VAR $UPSNAME battery.charge.warning "$UPS_battery_charge_warning"
+VAR $UPSNAME battery.voltage "$UPS_battery_voltage"
+VAR $UPSNAME battery.voltage.nominal "$UPS_battery_voltage_nominal"
+VAR $UPSNAME battery.date "$UPS_battery_date"
+VAR $UPSNAME battery.mfr.date "$UPS_battery_date"
+VAR $UPSNAME battery.temperature "$UPS_battery_temperature"
+VAR $UPSNAME battery.type "$UPS_battery_type"
+VAR $UPSNAME driver.name "$UPS_driver_name"
+VAR $UPSNAME driver.version.internal "$UPS_driver_version_internal"
+VAR $UPSNAME driver.version.data "$UPS_driver_version_data"
+VAR $UPSNAME driver.parameter.pollfreq "$UPS_driver_parameter_pollfreq"
+VAR $UPSNAME driver.parameter.pollinterval "$UPS_driver_parameter_pollinterval"
+VAR $UPSNAME input.voltage "$UPS_input_voltage"
+VAR $UPSNAME input.voltage.nominal "$UPS_input_voltage_nominal"
+VAR $UPSNAME input.voltage.minimum "$UPS_input_voltage_minimum"
+VAR $UPSNAME input.voltage.maximum "$UPS_input_voltage_maximum"
+VAR $UPSNAME input.sensitivity "$UPS_input_sensitivity"
+VAR $UPSNAME input.transfer.high "$UPS_input_transfer_high"
+VAR $UPSNAME input.transfer.low "$UPS_input_transfer_low"
+VAR $UPSNAME input.frequency "$UPS_input_frequency"
+VAR $UPSNAME input.frequency.nominal "$UPS_input_frequency_nominal"
+VAR $UPSNAME input.transfer.reason "$UPS_input_transfer_reason"
+VAR $UPSNAME output.voltage "$UPS_output_voltage"
+VAR $UPSNAME output.voltage.nominal "$UPS_output_voltage_nominal"
+VAR $UPSNAME output.current "$UPS_output_current"
+VAR $UPSNAME server.info "$UPS_server_info"
+VAR $UPSNAME ups.beeper.status "enabled"
+END LIST VAR $UPSNAME
+EOF
 			log ">>> returned all VARs"
 
 		else #not a supported command
