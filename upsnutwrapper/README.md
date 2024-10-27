@@ -8,7 +8,7 @@ Hi,
 
 I had a problem. I have a Debian based Linux machine (works for Ubuntu or a Raspberry too) with an APC ups connected via USB cable (works also via ethernet client) running the lovely,
 small and simple **apcupsd**. Also other PCs (running Windows) are connected to the same ups, so I installed **apcupsd** on Windows too and connected
-it to the apcupsd on the Linux machine, fine. Then I needed an additional **NUT server** so I can hook up my **Synology/QNAP NAS** also to the same ups.
+it to the apcupsd on the Linux machine, fine. Then I needed an additional **NUT server** so I can hook up a **Synology/QNAP/True-NAS** also to the same ups.
 But, trying to install the complicated NUT-Server alongside **apcupsd** on the same linux machine was a pain. 
 
 So, I wrote this little script that emulates a **NUT Server** and gets the values from `apcupsd/apcaccess`.
@@ -23,7 +23,7 @@ Ciao Martin
 
 This little script emulates a **NUT-Server** together with the tiny tool "tcpserver"
 from the ucspi-tcp package. It **needs** an installed and working **apcupsd** running on the machine
-or on a remote machine. It is working fine with Synology/QNAP NAS for example (my usecase).
+or on a remote machine. It is working fine with Synology/QNAP/True-NAS for example (my usecase).
 
 The script is simple and small and solves some problems having **apcupsd and a NUT-Server** on the
 same machine. Use it if you like, but don't scream at me if it's doing something wrong.
