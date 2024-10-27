@@ -75,6 +75,36 @@ Please feel free to make this script better, patches/pull requests are welcome i
      @reboot  <user>  tcpserver -q -c 10 -HR 0.0.0.0 3493 /usr/local/bin/upsnutwrapper.sh &
      ```
      Replace `<user>` with root or the user you want to run the script in the background.
+     
+   1. Alternatively, install NUT-Server-Wrapper as a systemd service (all commands should be run as root or with sudo):
+      
+      Copy `upsnutwrapper.service` to `/etc/systemd/system/` and set its permissions to 644.
+      
+      Start the service:
+      ``` console
+      systemctl start upsnutwrapper.service
+      ```
+
+      Verify that the service started successfully:
+      ``` console
+      $ systemctl status upsnutwrapper.service
+       ● upsnutwrapper.service - Adapter layer on top apcuspd to emulate NUT network protocol
+            Loaded: loaded (/etc/systemd/system/upsnutwrapper.service; enabled; preset: enabled)
+            Active: active (running) since Wed 2024-10-23 23:00:24 CDT; 1min 3s ago
+          Main PID: 1317387 (tcpserver)
+             Tasks: 1 (limit: 18995)
+            Memory: 180.0K
+               CPU: 1.788s
+            CGroup: /system.slice/upsnutwrapper.service
+                    └─1317387 /usr/bin/tcpserver -q -c 10 -HR 0.0.0.0 3493 /usr/local/bin/upsnutwrapper.sh "&"
+       
+       Oct 23 23:00:24 proxmox systemd[1]: Started upsnutwrapper.service - Adapter layer on top apcuspd to emulate NUT network protocol.
+      ```
+      
+      Enable the service so that it starts automatically when the system boots:
+      ``` console
+      systemctl enable upsnutwrapper.service
+      ```
 
 &nbsp;<br>
 
