@@ -62,6 +62,7 @@ Please feel free to make this script better, patches/pull requests are welcome i
      ``` console
      apt-get update && apt-get install ucspi-tcp -y
      ```
+     > For openSUSE Tumbleweed users:<br>The package ucspi-tcp doesn't exist in standard Tumbleweed repos. Install it via opi like `sudo opi ucspi-tcp`. Chose the option which is an openSUSE repo titled network (its colored green). When installing you will get an error about a missing dependency (daemontools I think). You can ignore it by choosing to "break" the install by not installing this dependency. Once installed you can verify the tcpserver command is installed by typing `tcpserver --help` and seeing if the help is displayed. (Issue https://github.com/gitmachtl/various/issues/9)
 
   1. Start the NUT-Server-Wrapper by executing the following command via shell or a script:
      ``` console   
@@ -105,6 +106,10 @@ Please feel free to make this script better, patches/pull requests are welcome i
       ``` console
       systemctl enable upsnutwrapper.service
       ```
+
+1. Check your Firewall settings:
+
+      If you have a local firewall installed, make sure to open up the port `3493/TCP` to be accessable from your NUT-Client devices.
 
 &nbsp;<br>
 
