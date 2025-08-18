@@ -1,0 +1,22 @@
+services:
+  upsnutwrapper:
+    image: bnhf/upsnutwrapper:${TAG:-latest}
+    container_name: upsnutwrapper
+    hostname: ${HOSTNAME} # Required. A hostname to use for your Docker container to help identify the system to which your UPS is attached.
+    ports:
+      - ${HOST_PORT:-3493}:3493
+    environment:
+      - APCUPSD_SERVER=${APCUPSD_SERVER:-localhost}
+      - UPS_NAMES=${UPSNAME} # Required. Sets a name for the UPS (1 to 8 chars), that will be used by System Tray notifications, nut-cgi and Grafana dashboards
+      - BATTERY_TYPE=${BATTERY_TYPE:-PbAc}
+      - DEVICE_DESCRIPTION=${DEVICE_DESCRIPTION:-UPS NUT Apcupsd Wrapper}
+      - INPUT_FREQUENCY_NOMINAL=${INPUT_FREQUENCY_NOMINAL}
+      - INPUT_SENSITIVITY=${INPUT_SENSITIVITY:-low}
+      - INPUT_TRANSFER_HIGH=${INPUT_TRANSFER_HIGH:-285}
+      - INPUT_TRANSFER_LOW=${INPUT_TRANSFER_LOW:-196}
+      - INPUT_VOLTAGE_NOMINAL=${INPUT_VOLTAGE_NOMINAL:-240}
+      - INPUT_POWER_SUPPORTED=${INPUT_POWER_SUPPORTED:-true}
+      - OUTPUT_POWER_SUPPORTED=${OUTPUT_POWER_SUPPORTED:-true}
+      - LOGGING=${LOGGING:-true}
+      - DEBUG=${DEBUG:-false}
+    restart: unless-stopped

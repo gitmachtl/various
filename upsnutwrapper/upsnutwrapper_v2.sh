@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 # upsnutwrapper.sh - Emulates a NUT server using apcaccess and tcpserver
-# 2025.08.17
+# 2025.08.18
 
-#exec 2>/tmp/upsnutwrapper.debug
-#set -x
+[[ "$DEBUG" == "true" ]] \
+  && exec 2>/tmp/upsnutwrapper.debug \
+  && set -x
 
 set -euo pipefail
 
@@ -11,17 +12,28 @@ set -euo pipefail
 # variables=snake_case, functions=camelCase, env vars=UPPER_CASE
 
 script_version="2.0"
-apcupsd_server="${APCUPSD_SERVER:-localhost}"
-logging="${LOGGING:-false}"
 log_file=/tmp/upsnutwrapper.log
 protocol_version="1.2"
 batt_not_full=0
-input_voltage_nominal="${INPUT_VOLTAGE_NOMINAL:-240}"
-input_frequency_nominal="${INPUT_FREQUENCY_NOMINAL:-50}"
-input_power_default="$( [[ ${INPUT_POWER_SUPPORTED:-true} == "true" ]] && echo 0 || echo "" )"
-output_power_default="$( [[ ${OUTPUT_POWER_SUPPORTED:-true} == "true" ]] && echo 0 || echo "" )"
+
+# ------------- Overridable Defaults -------------
+# These default values can be overridden by environment variables (primarily for use in the Docker build: bnhf/upsnutwrapper)
+
+apcupsd_server="${APCUPSD_SERVER:-localhost}"
+logging="${LOGGING:-false}"
 apcaccess_last_poll="${APCACCESS_LAST_POLL:--10}"
 ups_names=( "${UPS_NAMES[@]:-"ups" "qnapups"}" )
+
+battery_type="${BATTERY_TYPE:-PbAc}"
+device_description="${DEVICE_DESCRIPTION:-UPS NUT Apcupsd Wrapper}"
+input_frequency_nominal="${INPUT_FREQUENCY_NOMINAL:-50}"
+input_sensitivity="${INPUT_SENSITIVITY:-low}"
+input_transfer_high="${INPUT_TRANSFER_HIGH:-285}"
+input_transfer_low="${INPUT_TRANSFER_LOW:-196}"
+input_voltage_nominal="${INPUT_VOLTAGE_NOMINAL:-240}"
+input_power_default="$( [[ ${INPUT_POWER_SUPPORTED:-true} == "true" ]] && echo 0 || echo "" )"
+output_power_default="$( [[ ${OUTPUT_POWER_SUPPORTED:-true} == "true" ]] && echo 0 || echo "" )"
+ups_beeper_status="${UPS_BEEPER_STATUS:-enabled}"
 
 # -------------------- Logging --------------------
 
@@ -87,10 +99,10 @@ battery.mfr.date||Battery manufacturing date (alternate)|STRING:10
 battery.runtime|0|Battery runtime (seconds)|NUMBER
 battery.runtime.low|10|Low battery runtime (seconds)|STRING:10
 battery.temperature||Battery temperature (degrees C)|NUMBER
-battery.type|PbAc|Battery type|NUMBER
+battery.type|$battery_type|Battery type|NUMBER
 battery.voltage|0|Battery voltage|NUMBER
 battery.voltage.nominal|0|Nominal battery voltage|NUMBER
-device.description|UPS NUT Apcupsd Wrapper|Description of the device (opaque string)|NUMBER
+device.description|$device_description|Description of the device (opaque string)|NUMBER
 device.mfr|American Power Conversion|Device manufacturer|NUMBER
 device.model|NO MODEL|Device model|NUMBER
 device.serial||Device serial number|NUMBER
@@ -111,9 +123,9 @@ driver.version.internal|0.47|Internal version|NUMBER
 driver.version.usb|libusb-1.0.26 (API: 0x1000109)|USB version|NUMBER
 input.frequency|0|Input line frequency (Hz)|NUMBER
 input.frequency.nominal|$input_frequency_nominal|Nominal input line frequency (Hz)|NUMBER
-input.sensitivity|low|Input sensitivity|STRING:10
-input.transfer.high|150|High transfer voltage|STRING:10
-input.transfer.low|78|Low transfer voltage|STRING:10
+input.sensitivity|$input_sensitivity|Input sensitivity|STRING:10
+input.transfer.high|$input_transfer_high|High transfer voltage|STRING:10
+input.transfer.low|$input_transfer_low|Low transfer voltage|STRING:10
 input.transfer.reason||Reason for transfer|NUMBER
 input.voltage|$input_power_default|Input voltage|NUMBER
 input.voltage.nominal|$input_voltage_nominal|Nominal input voltage|NUMBER
@@ -123,7 +135,7 @@ output.current|$output_power_default|Output current (A)|NUMBER
 output.voltage|$output_power_default|Output voltage (V)|NUMBER
 output.voltage.nominal|$output_power_default|Nominal output voltage (V)|NUMBER
 server.info|$HOSTNAME|Server hostname|NUMBER
-ups.beeper.status|disabled|Beeper status|NUMBER
+ups.beeper.status|$ups_beeper_status|Beeper status|NUMBER
 ups.delay.start||Interval to wait before restarting the load (seconds)|STRING:10
 ups.delay.shutdown|0|Interval to wait after shutdown with delay command (seconds)|STRING:10
 ups.firmware||Firmware version|NUMBER
