@@ -9,7 +9,7 @@ services:
     ports:
       - ${HOST_PORT:-3493}:3493 # Use the standard NUT port number of 3493, or optionally change it, if it's in use on your Docker host. Default=3493.
     environment: # This Docker compose is best used with Portainer. Any env vars you'd like to change should be added in the Environment variables section of the Portainer-Stacks editor.
-      - APCUPSD_SERVER=${APCUPSD_SERVER:-localhost} # Set the hostname or IP to reach your apcupsd server. Add port if not 3551 in the form hostmane:port or ip:port. Default=localhost.
+      - APCUPSD_SERVER=${APCUPSD_SERVER:-localhost} # Set the hostname or IP to reach your apcupsd server. Add port if not 3551 in the form hostname:port or ip:port. Default=localhost.
       - UPS_NAMES=${UPSNAME} # Required. Set a name for the UPS (1 to 8 chars) that will be used by System Tray notifications, nut-cgi and Grafana dashboards.
       - BATTERY_TYPE=${BATTERY_TYPE:-PbAc} # Set this to match your UPS battery type. Li-ion=Lithium-ion, PbAc=Lead Acid. Default=PbAc.
       - DEVICE_DESCRIPTION=${DEVICE_DESCRIPTION:-UPS NUT Apcupsd Wrapper}
