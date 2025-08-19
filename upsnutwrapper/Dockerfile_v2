@@ -1,4 +1,4 @@
-#docker buildx build --platform linux/amd64,linux/arm64,linux/arm/v7 -f Dockerfile_v2 -t bnhf/upsnutwrapper:test_v2 . --push --no-cache
+#docker buildx build --platform linux/amd64,linux/arm64,linux/arm/v7 -f Dockerfile_v2 -t bnhf/upsnutwrapper:latest -t bnhf/upsnutwrapper:2025.08.19 . --push --no-cache
 FROM debian:12-slim
 
 # Install required packages

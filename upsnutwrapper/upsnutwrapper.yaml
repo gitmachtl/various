@@ -1,22 +1,25 @@
 services:
-  upsnutwrapper:
-    image: bnhf/upsnutwrapper:${TAG:-latest}
+  upsnutwrapper: # This docker-compose typically requires no editing. Use the Environment variables section of Portainer to set your values.
+    # 2025.08.19
+    # GitHub home for this project: https://github.com/bnhf/upsnutwrapper.
+    # Docker container home for this project with setup instructions: https://hub.docker.com/r/bnhf/upsnutwrapper.
+    image: bnhf/upsnutwrapper:${TAG:-latest} # Add the tag like latest or test to the environment variables below. 
     container_name: upsnutwrapper
     hostname: ${HOSTNAME} # Required. A hostname to use for your Docker container to help identify the system to which your UPS is attached.
     ports:
-      - ${HOST_PORT:-3493}:3493
-    environment:
-      - APCUPSD_SERVER=${APCUPSD_SERVER:-localhost}
-      - UPS_NAMES=${UPSNAME} # Required. Sets a name for the UPS (1 to 8 chars), that will be used by System Tray notifications, nut-cgi and Grafana dashboards
-      - BATTERY_TYPE=${BATTERY_TYPE:-PbAc}
+      - ${HOST_PORT:-3493}:3493 # Use the standard NUT port number of 3493, or optionally change it, if it's in use on your Docker host. Default=3493.
+    environment: # This Docker compose is best used with Portainer. Any env vars you'd like to change should be added in the Environment variables section of the Portainer-Stacks editor.
+      - APCUPSD_SERVER=${APCUPSD_SERVER:-localhost} # Set the hostname or IP to reach your apcupsd server. Add port if not 3551 in the form hostmane:port or ip:port. Default=localhost.
+      - UPS_NAMES=${UPSNAME} # Required. Set a name for the UPS (1 to 8 chars) that will be used by System Tray notifications, nut-cgi and Grafana dashboards.
+      - BATTERY_TYPE=${BATTERY_TYPE:-PbAc} # Set this to match your UPS battery type. Li-ion=Lithium-ion, PbAc=Lead Acid. Default=PbAc.
       - DEVICE_DESCRIPTION=${DEVICE_DESCRIPTION:-UPS NUT Apcupsd Wrapper}
-      - INPUT_FREQUENCY_NOMINAL=${INPUT_FREQUENCY_NOMINAL}
-      - INPUT_SENSITIVITY=${INPUT_SENSITIVITY:-low}
-      - INPUT_TRANSFER_HIGH=${INPUT_TRANSFER_HIGH:-285}
-      - INPUT_TRANSFER_LOW=${INPUT_TRANSFER_LOW:-196}
-      - INPUT_VOLTAGE_NOMINAL=${INPUT_VOLTAGE_NOMINAL:-240}
-      - INPUT_POWER_SUPPORTED=${INPUT_POWER_SUPPORTED:-true}
-      - OUTPUT_POWER_SUPPORTED=${OUTPUT_POWER_SUPPORTED:-true}
-      - LOGGING=${LOGGING:-true}
-      - DEBUG=${DEBUG:-false}
+      - INPUT_FREQUENCY_NOMINAL=${INPUT_FREQUENCY_NOMINAL:-50} # Set this to match your local nominal line frequency. 50=50Hz, 60=60Hz. Default=50.
+      - INPUT_SENSITIVITY=${INPUT_SENSITIVITY:-low} # Set this to match the input sensitivy in use on your UPS. Typically low, medium or high. Default=low.
+      - INPUT_TRANSFER_HIGH=${INPUT_TRANSFER_HIGH:-285} # Set this to match the high voltage transfer value for the sensitivity selected. Default=285.
+      - INPUT_TRANSFER_LOW=${INPUT_TRANSFER_LOW:-196} # Set this to match the low voltage transfer value for the sensitivity selected. Default=196.
+      - INPUT_VOLTAGE_NOMINAL=${INPUT_VOLTAGE_NOMINAL:-240} # Set this to match your local nominal line voltage. 240=240V, 120=120V. Default=240.
+      - INPUT_POWER_SUPPORTED=${INPUT_POWER_SUPPORTED:-true} # Set this to false if apcupsd does not report your UPS input power voltage. Default=true.
+      - OUTPUT_POWER_SUPPORTED=${OUTPUT_POWER_SUPPORTED:-true} # Set this to false if apcupsd does not report your UPS output power voltage. Default=true.
+      - LOGGING=${LOGGING:-true} # Docker users should leave this set to true. Standalone script users should generally set this to false. Default=true.
+      - DEBUG=${DEBUG:-false} # When set to true Bash debugging will be sent to a file, /tmp/upsnutwrapper.debug. Set to true only for short-term debugging. Default=false.
     restart: unless-stopped
