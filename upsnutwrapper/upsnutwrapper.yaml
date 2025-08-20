@@ -11,6 +11,7 @@ services:
     environment: # This Docker compose is best used with Portainer. Any env vars you'd like to change should be added in the Environment variables section of the Portainer-Stacks editor.
       - APCUPSD_SERVER=${APCUPSD_SERVER:-localhost} # Set the hostname or IP to reach your apcupsd server. Add port if not 3551 in the form hostname:port or ip:port. Default=localhost.
       - UPS_NAMES=${UPSNAME} # Required. Set a name for the UPS (1 to 8 chars) that will be used by System Tray notifications, nut-cgi and Grafana dashboards.
+      - BATTERY_DATE=${BATTERY_DATE} # If you can't update the battery installation date in your UPS, you can override it here. In the form YYYY/MM/DD.
       - BATTERY_TYPE=${BATTERY_TYPE:-PbAc} # Set this to match your UPS battery type. Li-ion=Lithium-ion, PbAc=Lead Acid. Default=PbAc.
       - DEVICE_DESCRIPTION=${DEVICE_DESCRIPTION:-UPS NUT Apcupsd Wrapper}
       - INPUT_FREQUENCY_NOMINAL=${INPUT_FREQUENCY_NOMINAL:-50} # Set this to match your local nominal line frequency. 50=50Hz, 60=60Hz. Default=50.
@@ -20,6 +21,7 @@ services:
       - INPUT_VOLTAGE_NOMINAL=${INPUT_VOLTAGE_NOMINAL:-240} # Set this to match your local nominal line voltage. 240=240V, 120=120V. Default=240.
       - INPUT_POWER_SUPPORTED=${INPUT_POWER_SUPPORTED:-true} # Set this to false if apcupsd does not report your UPS input power voltage. Default=true.
       - OUTPUT_POWER_SUPPORTED=${OUTPUT_POWER_SUPPORTED:-true} # Set this to false if apcupsd does not report your UPS output power voltage. Default=true.
+      - UPS_BEEPER_STATUS=${UPS_BEEPER_STATUS:-enabled} # Set this to disabled if you've turned off your UPS beeper (alarm).
       - LOGGING=${LOGGING:-true} # Docker users should leave this set to true. Standalone script users should generally set this to false. Default=true.
       - DEBUG=${DEBUG:-false} # When set to true Bash debugging will be sent to a file, /tmp/upsnutwrapper.debug. Set to true only for short-term debugging. Default=false.
     restart: unless-stopped

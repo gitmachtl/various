@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # upsnutwrapper.sh - Emulates a NUT server using apcaccess and tcpserver
-# 2025.08.18
+# 2025.08.19
 
 [[ "$DEBUG" == "true" ]] \
   && exec 2>/tmp/upsnutwrapper.debug \
@@ -24,6 +24,7 @@ logging="${LOGGING:-false}"
 apcaccess_last_poll="${APCACCESS_LAST_POLL:--10}"
 ups_names=( "${UPS_NAMES[@]:-"ups" "qnapups"}" )
 
+battery_date="${BATTERY_DATE}"
 battery_type="${BATTERY_TYPE:-PbAc}"
 device_description="${DEVICE_DESCRIPTION:-UPS NUT Apcupsd Wrapper}"
 input_frequency_nominal="${INPUT_FREQUENCY_NOMINAL:-50}"
@@ -94,7 +95,7 @@ ups_defaults=$(cat <<EOF
 battery.charge|0|Battery charge (percent)|NUMBER
 battery.charge.low|10|Low battery charge threshold|STRING:10
 battery.charge.warning|50|Battery warning level|NUMBER
-battery.date||Battery manufacturing date|NUMBER
+battery.date|$battery_date|Battery manufacturing date|NUMBER
 battery.mfr.date||Battery manufacturing date (alternate)|STRING:10
 battery.runtime|0|Battery runtime (seconds)|NUMBER
 battery.runtime.low|10|Low battery runtime (seconds)|STRING:10
@@ -226,7 +227,7 @@ getFullData() {
       LOADAPNT)   ups[ups.load.apnt]="$value" ;;
       LOADPCT)    ups[ups.load]="${value%%.*}" ;;
       LOTRANS)    ups[input.transfer.low]="$value" ;;
-      MANDATE)    ups[mfr.date]="$value" ; ups[ups.mfr.date]="$value" ;;
+      MANDATE)    ups[mfr.date]="${value//-//}" ; ups[ups.mfr.date]="${value//-//}" ;;
       MBATTCHG)   ups[battery.charge.low]="$value" ;;
       MAXLINEV)   ups[input.voltage.maximum]="$value" ;;
       MINLINEV)   ups[input.voltage.minimum]="$value" ;;
@@ -299,7 +300,7 @@ while :; do
       getFullData || { echo "ERR DRIVER-NOT-CONNECTED"; break; }
       [[ "$nut_var" == "ups.status" ]] && getStatusData && ups[ups.status]="$ups_status"
       [[ "$nut_var" == "ups.test.result" ]] && getTestResult
-      if [[ -v ups[$nut_var] ]]; then
+      if [[ -v ups[$nut_var] && -n "${ups[$nut_var]}" ]]; then
         echo "VAR $ups_name $nut_var \"${ups[$nut_var]}\"" && log "<-- VAR $ups_name $nut_var \"${ups[$nut_var]}\""
       else
         echo "ERR VAR-NOT-SUPPORTED" && log "<-- ERR VAR-NOT-SUPPORTED"
