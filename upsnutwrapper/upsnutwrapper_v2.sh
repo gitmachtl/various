@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # upsnutwrapper.sh - Emulates a NUT server using apcaccess and tcpserver
-# 2025.08.19
+# 2025.08.25
 
 [[ "$DEBUG" == "true" ]] \
   && exec 2>/tmp/upsnutwrapper.debug \
@@ -24,11 +24,11 @@ logging="${LOGGING:-false}"
 apcaccess_last_poll="${APCACCESS_LAST_POLL:--10}"
 ups_names=( "${UPS_NAMES[@]:-"ups" "qnapups"}" )
 
-battery_date="${BATTERY_DATE}"
+battery_date="${BATTERY_DATE:-}"
 battery_type="${BATTERY_TYPE:-PbAc}"
 device_description="${DEVICE_DESCRIPTION:-UPS NUT Apcupsd Wrapper}"
 input_frequency_nominal="${INPUT_FREQUENCY_NOMINAL:-50}"
-input_sensitivity="${INPUT_SENSITIVITY:-low}"
+input_sensitivity="${INPUT_SENSITIVITY:-Low}"
 input_transfer_high="${INPUT_TRANSFER_HIGH:-285}"
 input_transfer_low="${INPUT_TRANSFER_LOW:-196}"
 input_voltage_nominal="${INPUT_VOLTAGE_NOMINAL:-240}"
