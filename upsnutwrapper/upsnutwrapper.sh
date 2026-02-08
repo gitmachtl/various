@@ -642,7 +642,7 @@ case "${COMMAND}" in
 				break #exiting the script
 			fi
 
-			#optimized output for the whole list of parameters (v
+			#optimized output for the whole list of parameters (v1.12)
 			cat <<- EOF
 BEGIN LIST VAR $UPSNAME
 VAR $UPSNAME device.description "$UPS_device_description"
